@@ -1,0 +1,216 @@
+{
+  "schema": "iidx-info-exporter/songs/1",
+  "songs": [
+    {
+      "music_id": 19071,
+      "title": "quaver♪",
+      "artist": "Risk Junk",
+      "genre": "HAPPY",
+      "charts": {
+        "SPB": {
+          "chart_type": "SPB",
+          "level": 1,
+          "bpm": {
+            "min": 182,
+            "max": 186
+          },
+          "bpm_display": {
+            "min": 182,
+            "max": 186,
+            "text": "182-186"
+          },
+          "note_count": 145,
+          "CN": false,
+          "HCN": false,
+          "BSS": false,
+          "MSS": false,
+          "radar": {
+            "NOTES": 13.08,
+            "PEAK": 12.85,
+            "SCRATCH": 0.65,
+            "SOF-LAN": 4.76,
+            "CHARGE": 0,
+            "CHORD": 0
+          },
+          "status": "calculated",
+          "status_label": "独立計算",
+          "warnings": []
+        },
+        "SPN": {
+          "chart_type": "SPN",
+          "level": 4,
+          "bpm": {
+            "min": 182,
+            "max": 186
+          },
+          "bpm_display": {
+            "min": 182,
+            "max": 186,
+            "text": "182-186"
+          },
+          "note_count": 357,
+          "CN": false,
+          "HCN": false,
+          "BSS": false,
+          "MSS": false,
+          "radar": {
+            "NOTES": 32.22,
+            "PEAK": 31.42,
+            "SCRATCH": 3.28,
+            "SOF-LAN": 10.67,
+            "CHARGE": 0,
+            "CHORD": 5
+          },
+          "status": "calculated",
+          "status_label": "独立計算",
+          "warnings": []
+        },
+        "SPH": {
+          "chart_type": "SPH",
+          "level": 9,
+          "bpm": {
+            "min": 182,
+            "max": 186
+          },
+          "bpm_display": {
+            "min": 182,
+            "max": 186,
+            "text": "182-186"
+          },
+          "note_count": 1075,
+          "CN": false,
+          "HCN": false,
+          "BSS": false,
+          "MSS": false,
+          "radar": {
+            "NOTES": 97.03,
+            "PEAK": 85.71,
+            "SCRATCH": 22.36,
+            "SOF-LAN": 28.64,
+            "CHARGE": 0,
+            "CHORD": 93.25
+          },
+          "status": "calculated",
+          "status_label": "独立計算",
+          "warnings": []
+        },
+        "SPA": {
+          "chart_type": "SPA",
+          "level": 12,
+          "bpm": {
+            "min": 182,
+            "max": 186
+          },
+          "bpm_display": {
+            "min": 182,
+            "max": 186,
+            "text": "182-186"
+          },
+          "note_count": 1745,
+          "CN": false,
+          "HCN": false,
+          "BSS": false,
+          "MSS": false,
+          "radar": {
+            "NOTES": 157.37,
+            "PEAK": 139.47,
+            "SCRATCH": 34.85,
+            "SOF-LAN": 45.73,
+            "CHARGE": 0,
+            "CHORD": 145.94
+          },
+          "status": "calculated",
+          "status_label": "独立計算",
+          "warnings": []
+        },
+        "DPN": {
+          "chart_type": "DPN",
+          "level": 4,
+          "bpm": {
+            "min": 182,
+            "max": 186
+          },
+          "bpm_display": {
+            "min": 182,
+            "max": 186,
+            "text": "182-186"
+          },
+          "note_count": 340,
+          "CN": false,
+          "HCN": false,
+          "BSS": false,
+          "MSS": false,
+          "radar": {
+            "NOTES": 30.1,
+            "PEAK": 32.85,
+            "SCRATCH": 2.63,
+            "SOF-LAN": 9.36,
+            "CHARGE": 0,
+            "CHORD": 3
+          },
+          "status": "calculated",
+          "status_label": "独立計算",
+          "warnings": []
+        },
+        "DPH": {
+          "chart_type": "DPH",
+          "level": 9,
+          "bpm": {
+            "min": 182,
+            "max": 186
+          },
+          "bpm_display": {
+            "min": 182,
+            "max": 186,
+            "text": "182-186"
+          },
+          "note_count": 1021,
+          "CN": false,
+          "HCN": false,
+          "BSS": false,
+          "MSS": false,
+          "radar": {
+            "NOTES": 90.38,
+            "PEAK": 85.71,
+            "SCRATCH": 13.81,
+            "SOF-LAN": 26.49,
+            "CHARGE": 0,
+            "CHORD": 83
+          },
+          "status": "calculated",
+          "status_label": "独立計算",
+          "warnings": []
+        },
+        "DPA": {
+          "chart_type": "DPA",
+          "level": 12,
+          "bpm": {
+            "min": 182,
+            "max": 186
+          },
+          "bpm_display": {
+            "min": 182,
+            "max": 186,
+            "text": "182-186"
+          },
+          "note_count": 1874,
+          "CN": false,
+          "HCN": false,
+          "BSS": false,
+          "MSS": false,
+          "radar": {
+            "NOTES": 170.15,
+            "PEAK": 146.51,
+            "SCRATCH": 17.75,
+            "SOF-LAN": 47.39,
+            "CHARGE": 0,
+            "CHORD": 163.16
+          },
+          "status": "calculated",
+          "status_label": "独立計算",
+          "warnings": []
+        }
+      }
+    }
+  ]
+}

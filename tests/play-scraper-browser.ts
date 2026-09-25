@@ -1,0 +1,44 @@
+// Run through the temporary local QA page to use the browser's actual DOMParser.
+import {parsePlayPage,formatPlayCharts,playDiagnostic} from '../lib/play-scraper';
+import {parsePlayImport} from '../lib/play-data';
+export function runScraperDomTests(){
+ const row=(lamp=5,score='3200 (1500/200)',dj='aa')=>`<tr><td><a href="detail.html?index=123">冥</a></td><td>ANOTHER</td><td><img src="/img/${dj}.gif"></td><td>${score}</td><td><img src="/img/clflg${lamp}.gif"></td></tr>`;
+ const html=(content:string)=>`<input type="hidden" name="style" value="0"><div class="series-difficulty"><table><tr><th>LEVEL 12</th></tr>${content}</table></div>`;
+ const parse=(text:string)=>parsePlayPage(new DOMParser().parseFromString(text,'text/html'),'SP',12);
+ const checks:{name:string;ok:boolean}[]=[];
+ const expect=(name:string,fn:()=>boolean)=>{try{checks.push({name,ok:fn()});}catch{checks.push({name,ok:false});}};
+ const rejects=(text:string)=>{try{parse(text);return false;}catch{return true;}};
+ expect('lamp, score and DJ LEVEL',()=>{const c=parse(html(row())).charts[0];return c.lamp==='HARD CLEAR'&&c.exScore==='3200'&&c.pgreat==='1500'&&c.djLevel==='AA';});
+ expect('official NO PLAY with a positive score is preserved',()=>{const c=parse(html(row(0))).charts[0];const imported=parsePlayImport(formatPlayCharts([{...c,mode:'SP'}],34).csv).entries[0].score;return imported.lamp==='NO PLAY'&&imported.exScore===3200&&imported.djLevel==='AA';});
+ expect('explicit NO PLAY with no score',()=>{const c=parse(html(row(0,'---','none'))).charts[0];return c.lamp==='NO PLAY'&&c.exScore==='';});
+ expect('login page rejected',()=>rejects('<h1>ログインしてください</h1>'));
+ expect('unknown clear lamp rejected',()=>rejects(html(row(9))));
+ expect('unknown DJ LEVEL rejected',()=>rejects(html(row(5,'3200 (1500/200)','unknown'))));
+ expect('inconsistent score rejected',()=>rejects(html(row(5,'3000 (1500/200)'))));
+ expect('wrong mode rejected',()=>rejects(html(row()).replace('value="0"','value="1"')));
+ expect('wrong level rejected',()=>rejects(html(row()).replace('LEVEL 12','LEVEL 11')));
+ expect('all matching table containers parsed',()=>parse(html(row())+html(row())).charts.length===2);
+ expect('legitimate empty table terminates pagination',()=>parse(html('')).charts.length===0);
+ const headers='<tr><th>曲名</th><th>CLEAR TYPE</th><th>譜面</th><th>LEVEL</th><th>スコア</th><th>DJ LEVEL</th></tr>';
+ const flat='<tr><td><a href="detail.html?index=123">冥</a></td><td>HARD CLEAR</td><td>ANOTHER</td><td>12</td><td>3,200</td><td>AA</td></tr>';
+ const renamed=`<input type="hidden" name="style" value="0"><table class="new-official-layout">${headers}${flat}</table>`;
+ expect('headers work without legacy container and with reordered columns',()=>{const c=parse(renamed).charts[0];return c.title==='冥'&&c.lamp==='HARD CLEAR'&&c.djLevel==='AA'&&c.level===12;});
+ expect('header image labels are used when the header has no text',()=>parse(renamed.replace('<th>CLEAR TYPE</th>','<th><img alt="CLEAR TYPE"></th>')).charts[0].lamp==='HARD CLEAR');
+ expect('rival or multi-difficulty duplicate score columns are not silently chosen',()=>{try{parse(renamed.replace('<th>DJ LEVEL</th>','<th>DJ LEVEL</th><th>スコア</th>'));return false;}catch(e){return e instanceof Error&&e.message.includes('COLUMNS_AMBIGUOUS');}});
+ expect('a score without PGREAT/GREAT imports as the three requested values',()=>{const page=parse(renamed),data=parsePlayImport(formatPlayCharts(page.charts.map(c=>({...c,mode:'SP'})),34).csv).entries[0];return data.score.exScore===3200&&data.score.pgreat===null&&data.score.great===null&&data.score.lamp==='HARD CLEAR'&&data.score.djLevel==='AA';});
+ expect('displayed page needs no requested level',()=>parsePlayPage(new DOMParser().parseFromString(renamed,'text/html'),'SP').charts.length===1);
+ expect('last short page is complete, preventing a spurious next-page failure',()=>parse(html(row())).hasNext===false);
+ expect('an explicit next link is respected even with a short page',()=>parse(html(row())+'<a rel="next" href="?offset=50">次へ</a>').hasNext===true);
+ const summary='<div class="music-diff"><table><tr><th colspan="2">CLEAR&nbsp;TYPE</th><th colspan="2">DJ&nbsp;LEVEL</th></tr><tr><td><img src="/img/clflg5.gif"></td><td>1曲</td><td><img src="/img/AA.gif"></td><td>1曲</td></tr></table></div>';
+ expect('the official aggregate counts table is not mistaken for song rows',()=>parse(summary+html(row())).charts.length===1);
+ expect('an inherited clear lamp survives zero score and unplayed DJ LEVEL',()=>{const c=parse(summary+html('<tr><td colspan="5"></td></tr>'+row(7,'0<br>(0/0)','---'))).charts[0];return c.lamp==='FULLCOMBO CLEAR'&&c.exScore==='0'&&c.djLevel==='';});
+ expect('official NEXT arrow is recognized',()=>parse(html(row())+'<div class="next-prev"><div class="navi-next"><a href="?offset=50"><span>NEXT&nbsp;</span>▶</a></div></div>').hasNext===true);
+ expect('official final page stops even when it has exactly 50 charts',()=>parse(html(row().repeat(50))+'<div class="next-prev"><table><tr><td></td><td></td></tr></table></div>').hasNext===false);
+ expect('official no-data page is an empty result, not a login failure',()=>{const p=parse('<div id="base-inner"><select name="style"><option selected value="0">SP</option></select>データがみつかりません。</div>');return p.charts.length===0&&p.hasNext===false;});
+ expect('lazy images, image labels and PNG extensions are supported',()=>parse(html(row().replace('src="/img/clflg5.gif"','data-src="/img/clflg5.png"').replace('src="/img/aa.gif"','alt="AA"'))).charts[0].djLevel==='AA');
+ expect('confirmed empty levels can have no legacy container',()=>parse('<main>該当する楽曲がありません</main>').charts.length===0);
+ expect('official login notice is identified separately from layout errors',()=>{try{parse('<div id="error-page"><div class="error_login">ログインしてください</div></div>');return false;}catch(e){return e instanceof Error&&e.message.includes('LOGIN_REQUIRED');}});
+ expect('unknown table layout fails with a diagnostic code',()=>{try{parse('<table><tr><td>unrecognized</td></tr></table>');return false;}catch(e){return e instanceof Error&&e.message.includes('LIST_NOT_FOUND');}});
+ expect('diagnostics exclude song text, scores, form secrets and link queries',()=>{const doc=new DOMParser().parseFromString(renamed.replace('冥','PRIVATE_SONG').replace('index=123','token=PRIVATE_TOKEN')+'<input type="hidden" name="token" value="PRIVATE_SECRET">','text/html');const value=playDiagnostic(new Error('PRIVATE_MESSAGE'),'SP ☆12',doc);return !/PRIVATE_|3,200|3200/.test(value)&&JSON.parse(value).displayed.layouts[0].headers.includes('score');});
+ return checks;
+}

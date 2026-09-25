@@ -1,0 +1,16 @@
+{
+  "id": "/IIDX-memo/",
+  "name": "IIDX OPTION NOTES",
+  "short_name": "IIDXメモ",
+  "description": "譜面別のオプション・白数字・緑数字を端末に保存。導入後はオフラインで利用できます。",
+  "lang": "ja",
+  "start_url": "/IIDX-memo/",
+  "scope": "/IIDX-memo/",
+  "display": "standalone",
+  "background_color": "#10141c",
+  "theme_color": "#10141c",
+  "icons": [
+    {"src": "/IIDX-memo/icons/iidx-memo-192-v2.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/IIDX-memo/icons/iidx-memo-512-v2.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}
