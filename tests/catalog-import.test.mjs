@@ -5,11 +5,26 @@ import {loadSource} from './load-source.mjs';
 const {parseCatalogImport,mergeCatalogImport,normalizeCatalogImportUrl,fetchCatalogImportText,CATALOG_IMPORT_MAX_BYTES}=await loadSource('../lib/catalog-import.ts');
 const {mergeCatalog,migrateLegacyState,isStoredCatalog}=await loadSource('../lib/iidx-catalog.ts');
 const {initialState,blankNote}=await loadSource('../lib/iidx-data.ts');
+const {chartAvailability}=await loadSource('../lib/iidx-view.ts');
 const {calculateActivity}=await loadSource('../lib/my-activity.ts');
 const sample=JSON.parse(readFileSync(new URL('./fixtures/catalog-import.json',import.meta.url),'utf8'));
 const input=()=>structuredClone(sample),parse=value=>parseCatalogImport(JSON.stringify(value));
 const origin={label:'songs.json'},at='2026-09-24T00:00:00.000Z';
 const existing=()=>({schemaVersion:1,source:'iidx-data-table',fetchedAt:at,sourceUpdatedAt:null,seriesNames:{19:'Lincle'},songs:[{id:'idt-1971',title:'quaver♪',artist:'Risk Junk',series:19,removed:false,bpm:'186',soflan:false}],charts:[{id:'idt-1971:SP:ANOTHER',songId:'idt-1971',mode:'SP',difficulty:'ANOTHER',level:11,bpm:'186',noteCount:1700,unofficialRatings:{},radar:{values:[100,100,100,100,100,100],notes:1700},community:{sp12:{normal:{value:1,label:'A'},hard:null}}}],additionalData:{radarCharts:1,sp11Charts:0,sp12Charts:1,dpCharts:0}});
+
+test('Per-chart IIDX 33 availability overrides song status and survives public DB refresh',()=>{
+ const value=input(),song=value.songs[0];
+ song.charts.SPA.arcade_availability={status:'not_included',reference_version:33};
+ song.charts.SPN.arcade_availability={status:'included',reference_version:33};
+ song.charts.SPH.arcade_availability={status:'unknown',reference_version:33};
+ song.charts.SPA.chart_source='PRIVATE_DISK_PATH';
+ const parsed=parse(value),first=mergeCatalogImport(existing(),parsed,origin,at).catalog;
+ const status=difficulty=>{const chart=first.charts.find(c=>c.mode==='SP'&&c.difficulty===difficulty);return chartAvailability(chart,first.songs[0]);};
+ assert.equal(status('ANOTHER'),'not_included');assert.equal(status('NORMAL'),'included');assert.equal(status('HYPER'),'unknown');
+ const refreshed=mergeCatalog(first,existing(),initialState()).catalog;
+ assert.equal(chartAvailability(refreshed.charts.find(c=>c.id==='idt-1971:SP:ANOTHER'),refreshed.songs[0]),'not_included');
+ assert(!JSON.stringify(refreshed).includes('PRIVATE_DISK_PATH'));
+});
 
 test('The supplied format maps all seven charts, SOF-LAN and false features without retaining file paths',()=>{
  const value=input();value.songs[0].charts.SPA.chart_source='PRIVATE_DISK_PATH';
