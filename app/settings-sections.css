@@ -1,0 +1,8 @@
+.settings-scroll .settings-group{border-bottom:1px solid var(--light-line,#3d5476)}
+.settings-scroll .settings-group>div{border:0}
+.settings-scroll .settings-group h3{margin:0;font-size:15px}
+.settings-group [data-slot=accordion-trigger]{padding:14px 0;min-height:48px;align-items:center;font-size:15px;color:var(--light-blue,#dae7f8)}
+.settings-group [data-slot=accordion-content][data-state=closed]{display:none}
+.settings-scroll .settings-group-content>section{border:0;padding:2px 0 14px}
+.settings-scroll .settings-group-content>section>h3{display:none}
+.settings-scroll .settings-group-content{padding-bottom:0}

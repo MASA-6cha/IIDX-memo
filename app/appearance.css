@@ -1,0 +1,47 @@
+/* These tokens are only set in light mode. Existing dark colors are fallbacks. */
+html[data-theme="light"] {
+ color-scheme: light;
+ --background:#f4f7fb; --foreground:#1c293c;
+ --card:#fff; --card-foreground:#1c293c;
+ --popover:#fff; --popover-foreground:#1c293c;
+ --primary:#087563; --primary-foreground:#fff;
+ --secondary:#e9eff6; --secondary-foreground:#1c293c;
+ --muted:#e9eff6; --muted-foreground:#52647b;
+ --accent:#e2eee9; --accent-foreground:#175344;
+ --destructive:#ad3245; --border:#c2cedc; --input:#b0bfd0; --ring:#087563;
+ --sidebar:#fff; --sidebar-foreground:#1c293c; --sidebar-primary:#087563;
+ --sidebar-primary-foreground:#fff; --sidebar-accent:#e2eee9;
+ --sidebar-accent-foreground:#175344; --sidebar-border:#c2cedc; --sidebar-ring:#087563;
+ --light-text:#1c293c; --light-muted:#52647b; --light-on-primary:#fff;
+ --light-surface-base:#f4f7fb; --light-surface:#fff; --light-surface-raised:#e9eff6;
+ --light-surface-hover:#52647b0c; --light-line:#bfccdb; --light-primary-fill:#087563;
+ --light-red:#ad3245; --light-pink:#953d77; --light-purple:#744b9d;
+ --light-blue:#245f9f; --light-teal:#086f68; --light-green:#276c42; --light-gold:#805700;
+ --light-surface-red:#fff0f2; --light-surface-pink:#f9eef6; --light-surface-purple:#f1edf8;
+ --light-surface-blue:#eaf2fc; --light-surface-teal:#e1f1ec; --light-surface-green:#e8f3ea; --light-surface-gold:#fff4d9;
+ --light-line-red:#d6a0a9; --light-line-pink:#d2a7c3; --light-line-purple:#bcacd3;
+ --light-line-blue:#a8bed8; --light-line-teal:#98c6b9; --light-line-green:#a8c4af; --light-line-gold:#cabb90;
+ --radar-grid:#b5c2d2; --radar-outline:#8197ad; --radar-label:#52647b; --radar-zero:#60728a;
+}
+html[data-theme="light"] .lamp-1{color:#973442}
+html[data-theme="light"] .lamp-5{color:#d12d3d}
+html[data-theme="light"] .radar-metric:not(.radar-zero),
+html[data-theme="light"] .radar-range>span:first-child,
+html[data-theme="light"] .radar-palette>span{color:color-mix(in srgb,var(--metric-color) 48%,#12243b)}
+html[data-theme="light"] .radar-max-star{color:#805700}
+.series-color-settings{padding:12px 0 2px}
+.series-color-settings select{appearance:auto;width:100%;font-size:16px}
+.series-color-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;font-size:14px}
+.series-color-row>label{flex:1}
+.series-color-row small{font-size:12px;color:var(--muted-foreground)}
+.series-color-row input[type="color"]{width:48px;height:44px;padding:3px;border:1px solid var(--border);border-radius:6px;background:var(--card);cursor:pointer}
+.series-color-row .secondary-button{min-height:44px;font-size:12px;padding:8px}
+.series-color-preview{margin-top:14px;padding:14px 12px;border:1px solid var(--border);border-radius:6px;background:var(--background);font-size:16px;font-weight:600;overflow-wrap:anywhere}
+.series-outline-toggle{margin-top:16px}
+.series-color-row input[type="color"]:disabled{opacity:.4;cursor:default}
+.series-copy-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.series-copy-actions .secondary-button{flex:1;white-space:nowrap;font-size:13px;padding:9px 8px;min-height:44px}
+.settings-scroll .series-copy-help{margin-top:8px;font-size:12px}
+
+.radar-palette>span{color:var(--metric-color)}
+html[data-theme="light"] .radar-axis-label{fill:color-mix(in srgb,var(--metric-color) 48%,#12243b)}
