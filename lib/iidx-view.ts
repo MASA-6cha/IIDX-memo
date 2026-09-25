@@ -4,12 +4,15 @@ import {type FolderSummaryMode} from './folder-summary';
 import {initialSeriesColors,seriesColorsSchema,initialSeriesOutlines,seriesOutlinesSchema,type SeriesColors,type SeriesOutlines,type Theme} from './appearance';
 import {emptyRadarRanges,type ClearGauge,type DifficultyTable,type RadarRange} from './iidx-additional';
 import {type ScoreSource} from './play-history';
-import {type CpiGauge,type Chart} from './iidx-data';
+import {type CpiGauge,type Chart,type Song,type ArcadeAvailability} from './iidx-data';
 import {initialPlayDisplay,playDisplaySchema,type PlayDisplay} from './play-display';
 
 export const chartFeatureKeys=['CN','HCN','BSS','MSS'] as const;
 export type ChartFeature=typeof chartFeatureKeys[number];
 export const matchesChartFeatures=(chart:Chart,features:ChartFeature[])=>features.every(key=>chart.importedInfo?.features?.[key]===true);
+export function chartAvailability(chart:Chart,song:Song):ArcadeAvailability{
+ return chart.importedInfo?.arcadeAvailability?.status??(song.availabilityUnknown?'unknown':song.removed?'not_included':'included');
+}
 export type Filters={series:string;artist:string;levels:number[];availability:'all'|'available'|'removed';soflan:boolean;features:ChartFeature[]};
 export type LibraryView={theme:Theme;seriesTitleColors:boolean;seriesColors:SeriesColors;seriesOutlines:SeriesOutlines;query:string;filters:Filters;difficulty:string;folder:string;savedOnly:boolean;sort:string;sortDirection:'asc'|'desc';table:DifficultyTable;gauge:ClearGauge;cpiGauge:CpiGauge;officialFolderGrouping:OfficialFolderGrouping;difficultyFolderMode:boolean;difficultyFolder:string|null;folderSummary:FolderSummaryMode;rank:string;radarRanges:RadarRange[];playStatus:string;showPlayData:boolean;playDisplay:PlayDisplay;scoreSource:ScoreSource;showRadar:boolean;showUnofficial:boolean;radarMode:boolean};
 export const defaultFilters=():Filters=>({series:'all',artist:'',levels:[],availability:'available',soflan:false,features:[]});

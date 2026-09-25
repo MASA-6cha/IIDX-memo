@@ -6,7 +6,8 @@ export type Difficulty='BEGINNER'|'NORMAL'|'HYPER'|'ANOTHER'|'LEGGENDARIA';
 export const difficulties:Difficulty[]=['BEGINNER','NORMAL','HYPER','ANOTHER','LEGGENDARIA'];
 export const seriesNames:Record<number,string>={1:'1st style',2:'2nd style',3:'3rd style',4:'4th style',5:'5th style',6:'6th style',7:'7th style',8:'8th style',9:'9th style',10:'10th style',11:'IIDX RED',12:'HAPPY SKY',13:'DistorteD',14:'GOLD',15:'DJ TROOPERS',16:'EMPRESS',17:'SIRIUS',18:'Resort Anthem',19:'Lincle',20:'tricoro',21:'SPADA',22:'PENDUAL',23:'copula',24:'SINOBUZ',25:'CANNON BALLERS',26:'Rootage',27:'HEROIC VERSE'};
 export interface ImportedSongInfo{musicId:number;title:string;artist:string;genre?:string|null;importedAt:string}
-export interface ImportedChartInfo{level:number|null;bpm?:string;soflan?:boolean;noteCount?:number|null;radarValues?:RadarValues|null;features?:Partial<Record<'CN'|'HCN'|'BSS'|'MSS',boolean|null>>;status?:string|null;statusLabel?:string|null;warnings?:string[];importedAt:string}
+export type ArcadeAvailability='included'|'not_included'|'unknown';
+export interface ImportedChartInfo{level:number|null;bpm?:string;soflan?:boolean;noteCount?:number|null;radarValues?:RadarValues|null;features?:Partial<Record<'CN'|'HCN'|'BSS'|'MSS',boolean|null>>;status?:string|null;statusLabel?:string|null;arcadeAvailability?:{status:ArcadeAvailability;referenceVersion:number};warnings?:string[];importedAt:string}
 export interface Song{supplementBase?:Song|null;id:string;series:number;title:string;artist:string;bpm:string;soflan:boolean;removed:boolean;retained?:boolean;availabilityUnknown?:boolean;genre?:string|null;importedInfo?:ImportedSongInfo}
 export type RadarValues=[number|null,number|null,number|null,number|null,number|null,number|null];
 export interface DifficultyRating{value:number;label:string}

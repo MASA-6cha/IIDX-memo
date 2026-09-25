@@ -16,6 +16,7 @@ const rawChart=z.object({
  CN:z.boolean().nullable().optional(),HCN:z.boolean().nullable().optional(),BSS:z.boolean().nullable().optional(),MSS:z.boolean().nullable().optional(),
  radar:z.object({'NOTES':radarNumber,'PEAK':radarNumber,'SCRATCH':radarNumber,'SOF-LAN':radarNumber,SOFLAN:radarNumber,CHARGE:radarNumber,CHORD:radarNumber}).nullable().optional(),
  status:z.string().max(100).nullable().optional(),status_label:z.string().max(100).nullable().optional(),warnings:z.array(z.string().max(1000)).max(100).optional(),
+ arcade_availability:z.object({status:z.enum(['included','not_included','unknown']),reference_version:z.number().int().min(1).max(100)}).nullable().optional(),
 });
 const rawSong=z.object({music_id:z.number().int().min(1).max(999999999),title:z.string().trim().min(1).max(512).nullable(),artist:z.string().max(1024).nullable(),genre:z.string().max(512).nullable().optional(),charts:z.record(z.unknown())});
 export type ImportedChart=Omit<ImportedChartInfo,'importedAt'>&{mode:'SP'|'DP';difficulty:Difficulty};
@@ -57,6 +58,7 @@ export function parseCatalogImport(text:string):CatalogImport{
    const features:NonNullable<ImportedChartInfo['features']>={};for(const name of ['CN','HCN','BSS','MSS'] as const)if(c[name]!==undefined)features[name]=c[name];
    if(Object.keys(features).length)chart.features=features;
    if(c.status!==undefined)chart.status=c.status;if(c.status_label!==undefined)chart.statusLabel=c.status_label;
+   if(c.arcade_availability)chart.arcadeAvailability={status:c.arcade_availability.status,referenceVersion:c.arcade_availability.reference_version};
    if(c.warnings!==undefined){chart.warnings=c.warnings.slice(0,20);warningCount+=c.warnings.length;}
    charts.push(chart);chartCount++;
   }

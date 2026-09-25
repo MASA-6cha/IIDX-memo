@@ -1,4 +1,5 @@
 import {type Chart,type Song,type Mode} from './iidx-data';
+import {chartAvailability} from './iidx-view';
 import {lamps,type PlayScore} from './play-data';
 
 export const djLevels=['AAA','AA','A','B','C','D','E','F','記録なし'] as const;
@@ -28,7 +29,7 @@ export function calculateActivity(charts:Chart[],songs:Song[],records:Record<str
  let total=0,recorded=0,manual=0,missing=0,missingNotes=0,missingRadar=0,invalidScores=0;
  for(const chart of charts){
   const song=songMap.get(chart.songId);
-  if(chart.mode!==mode||!song||(scope==='available'&&(song.removed||song.availabilityUnknown||song.retained||chart.retained)))continue;
+  if(chart.mode!==mode||!song||(scope==='available'&&(chartAvailability(chart,song)!=='included'||song.retained||chart.retained)))continue;
   total++;
   const score=records[chart.id];
   dj[score?.djLevel??'記録なし']++;clear[score?.lamp??'NO PLAY']++;
