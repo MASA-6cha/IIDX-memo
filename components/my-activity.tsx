@@ -7,17 +7,18 @@ import {Table,TableHeader,TableBody,TableHead,TableRow,TableCell} from '@/compon
 import {type Chart,type Song,type Mode} from '@/lib/iidx-data';
 import {type PlayScore,lamps,lampLabels} from '@/lib/play-data';
 import {type ScoreSource,scoreSeriesLabel} from '@/lib/play-history';
-import {radarAxes,radarPoint} from '@/lib/iidx-additional';
+import {radarAxes,radarPoint,dominantRadarColor} from '@/lib/iidx-additional';
 import {ChartFeatures} from '@/components/chart-features';
 import {useFolderSwipe} from '@/lib/use-folder-swipe';
 import {calculateActivity,djLevels} from '@/lib/my-activity';
 
 function MyRadar({values}:{values:number[]}){
+ const color=dominantRadarColor(values);
  const size=320,center=size/2,ring=(value:number)=>radarAxes.map((_,i)=>radarPoint(i,value,size).join(',')).join(' ');
  return <svg className="activity-radar" viewBox="0 0 320 320" role="img" aria-label={`マイノーツレーダー。${radarAxes.map((axis,i)=>`${axis.label} ${values[i].toFixed(2)}`).join('、')}。外周200。`}>
   {[50,100,150,200].map(value=><polygon key={value} points={ring(value)} fill="none" stroke="var(--radar-grid, #3b4b61)" strokeWidth={value===100?1.5:1}/>)}
   {radarAxes.map((axis,i)=>{const [x,y]=radarPoint(i,200,size);return <line key={axis.key} x1={center} y1={center} x2={x} y2={y} stroke="var(--radar-grid, #3b4b61)"/>;})}
-  <polygon points={values.map((value,i)=>radarPoint(i,value,size).join(',')).join(' ')} fill="var(--primary)" fillOpacity=".22" stroke="var(--primary)" strokeWidth="2" strokeLinejoin="round"/>
+  <polygon className="radar-value-polygon" style={{'--metric-color':color} as CSSProperties} points={values.map((value,i)=>radarPoint(i,value,size).join(',')).join(' ')} fill={color} fillOpacity=".22" stroke={color} strokeWidth="2" strokeLinejoin="round"/>
   {radarAxes.map((axis,i)=>{const angle=-Math.PI/2+i*Math.PI/3;return <text key={axis.key} x={center+Math.cos(angle)*149} y={center+Math.sin(angle)*149} textAnchor="middle" dominantBaseline="middle" fontSize="12" className="radar-axis-label" style={{'--metric-color':axis.color} as CSSProperties} fill={axis.color}>{axis.short}</text>;})}
  </svg>;
 }

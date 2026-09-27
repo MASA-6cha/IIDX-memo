@@ -45,3 +45,6 @@ html[data-theme="light"] .radar-max-star{color:#805700}
 
 .radar-palette>span{color:var(--metric-color)}
 html[data-theme="light"] .radar-axis-label{fill:color-mix(in srgb,var(--metric-color) 48%,#12243b)}
+
+/* Match the dominant axis label while retaining each chart's fill opacity. */
+html[data-theme="light"] .radar-value-polygon{fill:color-mix(in srgb,var(--metric-color) 48%,#12243b);stroke:color-mix(in srgb,var(--metric-color) 48%,#12243b)}

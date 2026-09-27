@@ -9,6 +9,12 @@ export const radarAxes=[
  {key:'CHARGE',label:'CHARGE',short:'CHG',color:'#bd9aff'},
  {key:'CHORD',label:'CHORD',short:'CHD',color:'#bbea7d'},
 ] as const;
+// Equal maxima use the first axis in the displayed order. No positive data is neutral.
+export function dominantRadarColor(values:readonly (number|null|undefined)[]):string{
+ let maximum=0,color='var(--radar-zero, #8793a5)';
+ radarAxes.forEach((axis,index)=>{const value=values[index];if(typeof value==='number'&&Number.isFinite(value)&&value>maximum){maximum=value;color=axis.color;}});
+ return color;
+}
 export type RadarAxis=typeof radarAxes[number]['key'];
 export type DifficultyTable='official'|'sp12'|'sp11'|'dp'|'cpi';
 export type ClearGauge='normal'|'hard';
