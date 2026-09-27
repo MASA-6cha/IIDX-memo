@@ -49,8 +49,8 @@ test('Partial updates retain previous scores, both SP-side notes and favorites, 
  const next=row();next[7]='EX HARD CLEAR';const updated=applyPlayImport(first,matchPlayImport(parsePlayImport(csv([next])),songs,charts),now);
  assert.equal(updated.playData.records['mei:DP:ANOTHER'].lamp,'HARD CLEAR');assert.equal(updated.playData.records['mei:SP:ANOTHER'].lamp,'EX HARD CLEAR');
  assert.deepEqual(updated.notes,state.notes);assert.deepEqual(updated.folders,state.folders);assert.equal(state.playData,undefined);
- assert.deepEqual(parseBackup(makeBackup(updated)).data,updated);assert.deepEqual(parseBackup(makeBackup(state)).data,state);
- const invalid=JSON.parse(makeBackup(updated));invalid.data.playData.records['mei:SP:ANOTHER'].lamp='???';assert.throws(()=>parseBackup(JSON.stringify(invalid)));
+ assert.deepEqual(parseBackup(makeBackup(updated,initialLibraryView())).data,updated);assert.deepEqual(parseBackup(makeBackup(state,initialLibraryView())).data,state);
+ const invalid=JSON.parse(makeBackup(updated,initialLibraryView()));invalid.data.playData.records['mei:SP:ANOTHER'].lamp='???';assert.throws(()=>parseBackup(JSON.stringify(invalid)));
  assert.throws(()=>applyPlayImport(updated,[]));
 });
 test('Catalog migration and omissions retain imported scores even without option notes',()=>{
@@ -83,5 +83,5 @@ test('Official NO PLAY with a positive score survives import, storage and backup
  const score=state.playData.records['mei:SP:ANOTHER'];
  assert.equal(score.lamp,'NO PLAY');assert.equal(score.exScore,3200);assert.equal(score.djLevel,'AA');
  assert.equal(matchesPlayFilter(score,'played'),true);assert.equal(matchesPlayFilter(score,'NO PLAY'),true);
- assert.deepEqual(parseBackup(makeBackup(state)).data,state);
+ assert.deepEqual(parseBackup(makeBackup(state,initialLibraryView())).data,state);
 });

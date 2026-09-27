@@ -26,7 +26,7 @@ test('Legacy records survive imports of new series; re-import updates only its o
  assert.equal(updated.playData.history[id]['32'].exScore,2300);
  assert.equal(updated.playData.history[id]['33'].exScore,2400);
  assert.equal(next.playData.history[id]['33'].exScore,2100);
- assert.deepEqual(parseBackup(makeBackup(updated)).data,updated);
+ assert.deepEqual(parseBackup(makeBackup(updated,initialLibraryView())).data,updated);
  assert.equal(playDataSchema.safeParse(updated.playData).success,true);
 });
 
@@ -62,8 +62,8 @@ test('History is validated in backups, survives catalog ID migration and keeps c
  const migrated=migrateLegacyState(base,catalog).state;
  assert.deepEqual(Object.keys(migrated.playData.history[canonicalChartId(id)]),['32','33']);
  assert.equal(migrated.playData.history[id],undefined);
- assert.deepEqual(parseBackup(makeBackup(migrated)).data,migrated);
- const invalid=JSON.parse(makeBackup(base));invalid.data.playData.history[id]['32'].gameVersion=33;
+ assert.deepEqual(parseBackup(makeBackup(migrated,initialLibraryView())).data,migrated);
+ const invalid=JSON.parse(makeBackup(base,initialLibraryView()));invalid.data.playData.history[id]['32'].gameVersion=33;
  assert.throws(()=>parseBackup(JSON.stringify(invalid)));
 });
 

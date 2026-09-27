@@ -19,5 +19,10 @@ export function useLibraryView(){
   catch{setError('フィルター状態を端末に保存できませんでした。次回起動時に戻る場合があります。');}
   setView(next);
  },[]);
- return {view,updateView,ready,error};
+ const restoreView=useCallback((next:LibraryView)=>{
+  // Restoration must fail before changing in-memory settings if persistence is unavailable.
+  localStorage.setItem(libraryViewKey,serializeLibraryView(next));
+  viewRef.current=next;setView(next);setError('');
+ },[]);
+ return {view,updateView,restoreView,ready,error};
 }

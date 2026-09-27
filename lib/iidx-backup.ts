@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {libraryViewSchema,type LibraryView} from './iidx-view';
 import {commonNumbersSchema} from './common-numbers';
 import {manualChartsSchema} from './manual-chart';
 import {styles, covers, type AppState} from './iidx-data';
@@ -29,11 +30,12 @@ const stateSchema=z.object({
   color:z.string().regex(/^#[0-9a-fA-F]{6}$/),songIds:z.array(z.string().min(1).max(160)).max(50000).refine(v=>new Set(v).size===v.length),
  }).strict()).length(5).refine(f=>new Set(f.map(x=>x.id)).size===5),
 }).strict();
-const backupSchema=z.object({format:z.literal('iidx-option-notes'),version:z.literal(1),exportedAt:dateSchema,data:stateSchema}).strict();
-export type Backup={format:'iidx-option-notes';version:1;exportedAt:string;data:AppState};
+const legacyBackupSchema=z.object({format:z.literal('iidx-option-notes'),version:z.literal(1),exportedAt:dateSchema,data:stateSchema}).strict();
+const backupSchema=z.discriminatedUnion('version',[legacyBackupSchema,legacyBackupSchema.extend({version:z.literal(2),view:libraryViewSchema}).strict()]);
+export type Backup={format:'iidx-option-notes';exportedAt:string;data:AppState}&({version:1}|{version:2;view:LibraryView});
 
-export function makeBackup(state:AppState):string{
- const backup:Backup={format:'iidx-option-notes',version:1,exportedAt:new Date().toISOString(),data:state};
+export function makeBackup(state:AppState,view:LibraryView):string{
+ const backup:Backup={format:'iidx-option-notes',version:2,exportedAt:new Date().toISOString(),data:state,view};
  return JSON.stringify(backup);
 }
 
@@ -42,7 +44,7 @@ export function parseBackup(text:string):Backup{
  if(text.length>128_000_000)throw new Error('テキストが長すぎます。バックアップの部分だけを貼り付けてください。');
  let raw:unknown;
  try{raw=JSON.parse(text.trim().replace(/^\uFEFF/,''));}catch{throw new Error('テキストを読み取れません。エクスポートした内容を先頭から末尾まで、省略せずに貼り付けてください。');}
- if(typeof raw!=='object'||raw===null||!('format' in raw)||raw.format!=='iidx-option-notes'||!('version' in raw)||raw.version!==1)
+ if(typeof raw!=='object'||raw===null||!('format' in raw)||raw.format!=='iidx-option-notes'||!('version' in raw)||(raw.version!==1&&raw.version!==2))
   throw new Error('このアプリの設定バックアップではないか、未対応の形式です。エクスポートしたテキストを使ってください。');
  const result=backupSchema.safeParse(raw);
  if(!result.success)throw new Error('設定の項目・数値・お気に入り情報に不足や不正な値があります。元の端末からもう一度エクスポートしてください。');
@@ -52,4 +54,16 @@ export function parseBackup(text:string):Backup{
 export function backupCounts(state:AppState){
  const keys=Object.keys(state.notes);
  return {manualCharts:Object.keys(state.manualCharts??{}).length,total:keys.length,sp1:keys.filter(k=>k.endsWith(':1P')).length,sp2:keys.filter(k=>k.endsWith(':2P')).length,dp:keys.filter(k=>k.includes(':DP:')).length,favorites:state.folders.reduce((n,f)=>n+f.songIds.length,0),scores:Object.keys(collectPlayHistory(state.playData)).length};
+}
+
+// Write settings first; if the IndexedDB transaction fails, restore the previous settings.
+export async function restoreBackupData(backup:Backup,currentView:LibraryView,saveState:(state:AppState)=>Promise<unknown>,saveView:(view:LibraryView)=>void){
+ if(backup.version===1){await saveState(backup.data);return;}
+ saveView(backup.view);
+ try{await saveState(backup.data);}
+ catch(error){
+  try{saveView(currentView);}
+  catch{throw new Error('保存に失敗し、表示設定を元に戻せませんでした。メモ・プレイデータは変更されていません。表示設定を確認してから再度復元してください。');}
+  throw error;
+ }
 }

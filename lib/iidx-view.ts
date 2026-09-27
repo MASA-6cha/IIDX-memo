@@ -21,9 +21,7 @@ export const matchesDifficultyLevels=(level:number,levels:number[])=>levels.leng
 export const libraryViewKey='iidx-option-notes:library-view:v1';
 export const initialLibraryView=():LibraryView=>({theme:'dark',seriesTitleColors:true,seriesColors:initialSeriesColors(),seriesOutlines:initialSeriesOutlines(),query:'',filters:defaultFilters(),difficulty:'ANOTHER',folder:'all',savedOnly:false,sort:'catalog',sortDirection:'asc',table:'official',gauge:'hard',cpiGauge:'hard',officialFolderGrouping:'level',difficultyFolderMode:true,difficultyFolder:null,folderSummary:'both',rank:'all',radarRanges:emptyRadarRanges(),playStatus:'all',showPlayData:true,playDisplay:initialPlayDisplay(),scoreSource:'latest',showRadar:true,showUnofficial:true,radarMode:false});
 
-const storedViewSchema=z.object({
- version:z.literal(1),
- view:z.object({
+export const libraryViewSchema=z.object({
   theme:z.enum(['dark','light']).default('dark'),seriesTitleColors:z.boolean().default(true),seriesColors:seriesColorsSchema.default(initialSeriesColors),seriesOutlines:seriesOutlinesSchema.default(initialSeriesOutlines),
   query:z.string(),
   filters:z.object({
@@ -39,17 +37,15 @@ const storedViewSchema=z.object({
   radarRanges:z.array(z.object({min:z.string().max(30),max:z.string().max(30)})).length(6).default(emptyRadarRanges),
   playStatus:z.enum(['all','played','scored','missing','NO PLAY','FAILED','ASSIST CLEAR','EASY CLEAR','CLEAR','HARD CLEAR','EX HARD CLEAR','FULLCOMBO CLEAR']).default('all'),showPlayData:z.boolean().default(true),playDisplay:playDisplaySchema.default(initialPlayDisplay),scoreSource:z.union([z.enum(['latest','best','unknown']),z.string().regex(/^version:[1-9]\d{0,2}$/).transform(v=>v as ScoreSource)]).default('latest'),
   showRadar:z.boolean().default(true),showUnofficial:z.boolean().default(true),radarMode:z.boolean().default(false),
- }),
-});
+ }).transform(view=>({...view,sort:view.sort==='series'?'catalog':view.sort,sortDirection:view.sortDirection??(view.sort==='series'||view.sort==='level'?'desc':'asc')}));
+const storedViewSchema=z.object({version:z.literal(1),view:libraryViewSchema});
 
 export function parseLibraryView(text:string|null):LibraryView{
  if(!text)return initialLibraryView();
  try{
   const parsed=storedViewSchema.safeParse(JSON.parse(text));
   if(!parsed.success)return initialLibraryView();
-  const view=parsed.data.view;
-  // Older versions encoded direction in the series and level choices.
-  return {...view,sort:view.sort==='series'?'catalog':view.sort,sortDirection:view.sortDirection??(view.sort==='series'||view.sort==='level'?'desc':'asc')};
+  return parsed.data.view;
  }
  catch{return initialLibraryView();}
 }

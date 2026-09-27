@@ -22,6 +22,7 @@ import {CatalogImportSettings,ImportedChartDetails} from '@/components/catalog-i
 import {mergeCatalogImport,type CatalogImport,type ImportOrigin} from '@/lib/catalog-import';
 import {useOfflineApp} from '@/lib/use-offline-app';
 import {OfflineSettings,OfflineStatus} from '@/components/offline-settings';
+import {restoreBackupData,type Backup} from '@/lib/iidx-backup';
 import {useLibraryView} from '@/lib/use-library-view';
 import {useFolderSwipe} from '@/lib/use-folder-swipe';
 import {clearLibraryFilters,defaultFilters,chartFeatureKeys,matchesChartFeatures,toggleDifficultyLevel,matchesDifficultyLevels,chartAvailability,type Filters,type LibraryView} from '@/lib/iidx-view';
@@ -90,7 +91,7 @@ export default function Home(){
  const searchBySong=useMemo(()=>Object.fromEntries(songs.map(s=>[s.id,{title:normalized(s.title),artist:normalized(s.artist)}])),[songs]);
  const artists=useMemo(()=>Array.from(new Set(songs.map(s=>s.artist))).sort((a,b)=>a.localeCompare(b,'ja')),[songs]);
  const [ready,setReady]=useState(false);const [storageError,setStorageError]=useState('');const [persistence,setPersistence]=useState('確認中');
- const {view,updateView,ready:viewReady,error:viewError}=useLibraryView();
+ const {view,updateView,restoreView,ready:viewReady,error:viewError}=useLibraryView();
  const {theme,seriesTitleColors,seriesColors,seriesOutlines,query,filters,difficulty,folder,savedOnly,sort,sortDirection,table:requestedTable,gauge,cpiGauge,difficultyFolderMode,difficultyFolder,folderSummary,officialFolderGrouping,rank,radarRanges,showRadar,showUnofficial,radarMode,playStatus,showPlayData,playDisplay,scoreSource}=view;
  const playHistory=useMemo(()=>collectPlayHistory(app.playData),[app.playData]);
  const playRecords=useMemo(()=>resolvePlayRecords(playHistory,scoreSource),[playHistory,scoreSource]);
@@ -199,17 +200,18 @@ export default function Home(){
   finally{transitionLock.current=false;setTransitioning(false);}
  };
  const requestAppUpdate=()=>guard(()=>{setDirty(false);offline.applyUpdate();},'新しいアプリに切り替える');
- const restoreBackup=async(next:AppState)=>{
-  if(!ready||storageError)throw new Error('端末の保存領域を利用できません。再読み込みしてお試しください。');
+ const restoreBackup=async(backup:Backup)=>{
+  let next=backup.data;
+  if(!ready||!viewReady||storageError)throw new Error('端末の保存領域を利用できません。再読み込みしてお試しください。');
   if(dirty)throw new Error('編集中の内容を保存するか、編集を終了してから復元してください。');
   if(saveLock.current||transitionLock.current)throw new Error('保存処理が終わってから、もう一度お試しください。');
   transitionLock.current=true;setTransitioning(true);
   try{
    if(catalogRef.current)next=migrateLegacyState(next,catalogRef.current).state;
-   await commit(()=>next);
+   await restoreBackupData({...backup,data:next},view,s=>commit(()=>s),restoreView);
    const target=charts.find(c=>c.songId===selected.songId&&c.mode===next.preferences.mode&&c.difficulty===selected.difficulty)??charts.find(c=>c.mode===next.preferences.mode)!;
-   loadChart(target,next.preferences.spSide);setFolderNames(next.folders.map(f=>f.name));setDifficulty(target.difficulty);setEditorOpen(false);setFolder('all');setSavedOnly(false);
-  }catch{throw new Error('端末に保存できませんでした。復元は完了していません。もう一度お試しください。');}
+   loadChart(target,next.preferences.spSide);setFolderNames(next.folders.map(f=>f.name));setEditorOpen(false);
+  }catch(error){throw new Error(error instanceof Error&&error.message.startsWith('保存に失敗し、')?error.message:'端末に保存できませんでした。復元は完了していません。もう一度お試しください。');}
   finally{transitionLock.current=false;setTransitioning(false);}
  };
  const resetFilters=()=>updateView(clearLibraryFilters);
@@ -358,7 +360,7 @@ export default function Home(){
    <SettingsSection title="SPのプレイサイド"><section><h3>SPのプレイサイド</h3><Tabs value={spSide} onValueChange={changeSide}><TabsList><TabsTrigger value="1P">1P（左側）</TabsTrigger><TabsTrigger value="2P">2P（右側）</TabsTrigger></TabsList></Tabs><p>全楽曲に共通の切替です。設定内容は1P・2Pそれぞれに保存します。</p></section></SettingsSection>
    <SettingsSection title="お気に入りフォルダー"><section><h3><FolderHeart size={17}/>お気に入りフォルダー</h3>{app.folders.map((f,i)=><label className="folder-edit" key={f.id}><Folder color={f.color} size={19}/><input aria-label={`お気に入り${i+1}の名前`} maxLength={20} value={folderNames[i]??f.name} onChange={e=>setFolderNames(names=>{const n=[...names];n[i]=e.target.value;return n;})}/><span>{f.songIds.length}曲</span></label>)}<button className="secondary-button" disabled={!ready||!!storageError} onClick={async()=>{const names=app.folders.map((f,i)=>(folderNames[i]??f.name).trim());if(names.some(n=>!n)){toast.error('フォルダー名を入力してください。');return;}try{await commit(s=>({...s,folders:s.folders.map((f,i)=>({...f,name:names[i]}))}));toast.success('フォルダー名を保存しました。');}catch{toast.error('フォルダー名を保存できませんでした。');}}}>フォルダー名を保存</button></section></SettingsSection>
    <SettingsSection title="端末内の保存状態"><section><h3><ShieldCheck size={17}/>端末内の保存状態</h3><div className="storage-row"><span>通常保存</span><strong>{!ready?'確認中':storageError?'利用不可':'利用可能'}</strong></div><div className="storage-row"><span>永続保存</span><strong className={persistence==='有効'?'cyan-text':''}>{persistence}</strong></div><button className="secondary-button" onClick={()=>void requestPersistence()} disabled={persistence==='有効'||persistence==='非対応'}>永続保存を申請</button><p>許可はブラウザが判定します。ホーム画面に追加した場合は、追加後のアプリで保存状態を確認してください。</p><p>保存データは利用中のブラウザ・アプリごとに管理されます。他の端末には同期しません。</p></section></SettingsSection>
-   <SettingsSection title="データ移行・バックアップ"><DataTransfer charts={charts} state={app} disabled={!ready||busy||!!storageError} dirty={dirty} onRestore={restoreBackup}/></SettingsSection>
+   <SettingsSection title="データ移行・バックアップ"><DataTransfer charts={charts} state={app} view={view} disabled={!ready||!viewReady||busy||!!storageError} dirty={dirty} onRestore={restoreBackup}/></SettingsSection>
    <SettingsSection title="使用容量"><StorageUsage active={settingsOpen} state={app} catalog={catalog} offlineState={offline.state} view={view}/></SettingsSection>
    <SettingsSection title="シリーズ別のスコア削除"><ScoreSeriesDelete history={playHistory} seriesNames={seriesNames} disabled={!ready||busy||!!storageError} onDelete={async version=>{await commit(s=>deletePlaySeries(s,version));toast.success(`${version===null?'シリーズ不明':`#${version}`}のスコアデータを削除しました。`);}}/></SettingsSection>
    <SettingsSection title="このアプリについて"><section><h3>このアプリについて</h3><dl className="catalog-facts app-info"><div><dt>作成者</dt><dd>{APP_INFO.author}</dd></div><div><dt>作成ツール</dt><dd>{APP_INFO.tool}</dd></div><div><dt>作成日</dt><dd>{APP_INFO.createdDate}</dd></div><div><dt>バージョン</dt><dd>{APP_INFO.version}</dd></div></dl><p>{catalog?.source==='iidx-info-exporter'?'取り込んだ楽曲JSONを使い、譜面別のオプションを端末に記録します。':catalog?'IIDX Data Tableの公開データを使い、譜面別のオプションを端末に記録します。掲載情報の正確性・網羅性は保証されていません。':'現在は20曲・123譜面のUI確認用サンプルです。全体設定で楽曲DBを更新すると公開データに切り替わります。'}</p><p>非公式難易度・ノーツレーダーは楽曲DBの更新時にまとめて取得し、端末内に保存します。未掲載の情報は「—」と表示します。</p></section></SettingsSection>
