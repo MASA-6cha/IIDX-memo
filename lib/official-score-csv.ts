@@ -15,4 +15,7 @@ export function decodePlayCsv(bytes:ArrayBuffer):string{
  if(bytes.byteLength>8_000_000)throw new Error('CSVファイルは8MB以内にしてください。');
  try{return new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{return new TextDecoder('shift_jis',{fatal:true}).decode(bytes);}
 }
-export const officialCsvMode=(name:string):'SP'|'DP'|undefined=>/_sp_score\.csv$/i.test(name)?'SP':/_dp_score\.csv$/i.test(name)?'DP':undefined;
+export function officialCsvMode(name:string):'SP'|'DP'|undefined{
+ const match=/_([sd]p)_score(?:\[[^\]]*\]|-[^/\\]*)?\.csv$/i.exec(name);
+ return match?.[1].toUpperCase() as 'SP'|'DP'|undefined;
+}
