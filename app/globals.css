@@ -133,3 +133,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* Optional source diagnostics stay inside the song column on phones. */
 .track-title-source{display:flex;flex-direction:column;gap:2px;margin-top:5px;padding-top:4px;border-top:1px dashed var(--light-line,#3a485e);font-size:12px;line-height:1.4;font-weight:400;color:var(--light-muted,#a9bbd4);white-space:normal;overflow-wrap:anywhere;min-width:0}
 .track-title-source>span{display:block}
+
+/* Series labels are separate from user-selected title colors and outlines. */
+.track-heading{display:flex;align-items:baseline;gap:6px;min-width:0}
+.track-heading .track-title{min-width:0;flex:1}
+.track-heading .track-series{flex:none;align-self:flex-start;margin-top:3px;color:var(--light-muted,#b8c8e1);text-shadow:none;-webkit-text-stroke:0}
+/* Reserve the same star column in every metric, so decimals stay aligned. */
+.radar-metric>strong.radar-number{display:grid;grid-template-columns:minmax(0,1fr) 1em;align-items:baseline;gap:2px;align-self:stretch;white-space:nowrap;min-width:0}
+.radar-number-value{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.radar-star-slot{display:block;width:1em;text-align:left}
+.radar-star-slot .radar-max-star{margin-left:0;vertical-align:baseline}
+.radar-values-compact .radar-metric{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:1px}

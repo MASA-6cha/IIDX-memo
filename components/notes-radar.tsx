@@ -15,7 +15,7 @@ export function RadarValues({chart,compact=false,sort=''}:{chart:Chart;compact?:
  const maximum=values.length?Math.max(...values):null;
  return <span className={compact?'radar-values radar-values-compact':'radar-values'}>{radarAxes.map((axis,i)=>{
   const value=chart.radar?.values[i],isMaximum=typeof value==='number'&&value===maximum;
-  return <span key={axis.key} className={`radar-metric ${value===0?'radar-zero':''} ${sort===axis.key?'radar-sort-metric':''}`} style={{'--metric-color':axis.color} as CSSProperties}><span>{axis.label}</span><strong>{value?.toFixed(2)??'—'}{isMaximum&&<><span className="radar-max-star" aria-hidden="true">★</span><span className="sr-only">（最大値）</span></>}</strong></span>;
+  return <span key={axis.key} className={`radar-metric ${value===0?'radar-zero':''} ${sort===axis.key?'radar-sort-metric':''}`} style={{'--metric-color':axis.color} as CSSProperties}><span>{axis.label}</span><strong className="radar-number"><span className="radar-number-value">{value?.toFixed(2)??'—'}</span><span className="radar-star-slot" aria-hidden="true">{isMaximum&&<span className="radar-max-star">★</span>}</span>{isMaximum&&<span className="sr-only">（最大値）</span>}</strong></span>;
  })}</span>;
 }
 
