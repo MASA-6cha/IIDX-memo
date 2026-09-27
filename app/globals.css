@@ -129,3 +129,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .app-shell{padding-top:calc(85px + env(safe-area-inset-top))}
  }
 }
+
+/* Optional source diagnostics stay inside the song column on phones. */
+.track-title-source{display:flex;flex-direction:column;gap:2px;margin-top:5px;padding-top:4px;border-top:1px dashed var(--light-line,#3a485e);font-size:12px;line-height:1.4;font-weight:400;color:var(--light-muted,#a9bbd4);white-space:normal;overflow-wrap:anywhere;min-width:0}
+.track-title-source>span{display:block}
