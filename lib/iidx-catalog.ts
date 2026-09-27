@@ -97,7 +97,17 @@ export function migrateLegacyState(state:AppState,catalog:Catalog):{state:AppSta
   }
   history[next]=target;if(Object.keys(remaining).length)history[key]=remaining;else delete history[key];
  }
- return {state:{...state,notes,folders,...(catalog.songIdentities?{songIdentities:{links:{...state.songIdentities?.links,...catalog.songIdentities.links},redirects}}:{}),...(state.manualCharts?{manualCharts}:{}),...(state.playData?{playData:{...state.playData,records,history}}:{})},moved,conflicts};
+ const songRecords={...state.playData?.songRecords};
+ for(const [key,rows] of Object.entries(songRecords)){
+  const [old,mode]=key.split(':'),next=`${songId(old)}:${mode}`;
+  if(next===key||!songIds.has(songId(old)))continue;
+  const target={...songRecords[next]},remaining:typeof rows={};
+  for(const [version,row] of Object.entries(rows)){
+   if(target[version]&&JSON.stringify(target[version])!==JSON.stringify(row)){remaining[version]=row;conflicts++;}else target[version]=row;
+  }
+  songRecords[next]=target;if(Object.keys(remaining).length)songRecords[key]=remaining;else delete songRecords[key];
+ }
+ return {state:{...state,notes,folders,...(catalog.songIdentities?{songIdentities:{links:{...state.songIdentities?.links,...catalog.songIdentities.links},redirects}}:{}),...(state.manualCharts?{manualCharts}:{}),...(state.playData?{playData:{...state.playData,records,history,...(state.playData.songRecords?{songRecords}:{})}}:{})},moved,conflicts};
 }
 
 export function mergeCatalog(previous:Catalog|null,incoming:Catalog,state:AppState){
@@ -107,7 +117,7 @@ export function mergeCatalog(previous:Catalog|null,incoming:Catalog,state:AppSta
  incoming=reconcileSongIdentities(preserveImportedCatalog(previous,incoming));
  const songs=new Map(incoming.songs.map(s=>[s.id,s])),charts=new Map(incoming.charts.map(c=>[c.id,c]));
  const oldSongs=previous?.songs??sampleSongs,oldCharts=previous?.charts??sampleCharts;
- for(const s of oldSongs){const id=resolveSongId(canonicalSongId(s.id),incoming.songIdentities?.redirects);if(!songs.has(id)&&(previous||state.folders.some(f=>f.songIds.includes(s.id))||[...Object.keys(state.notes),...Object.keys(state.manualCharts??{}),...Object.keys(state.playData?.records??{}),...Object.keys(state.playData?.history??{})].some(k=>k.startsWith(`${s.id}:`)||k.startsWith(`${id}:`))))songs.set(id,{...s,id,retained:s.importedInfo?s.retained:true});}
+ for(const s of oldSongs){const id=resolveSongId(canonicalSongId(s.id),incoming.songIdentities?.redirects);if(!songs.has(id)&&(previous||state.folders.some(f=>f.songIds.includes(s.id))||[...Object.keys(state.notes),...Object.keys(state.manualCharts??{}),...Object.keys(state.playData?.records??{}),...Object.keys(state.playData?.history??{}),...Object.keys(state.playData?.songRecords??{})].some(k=>k.startsWith(`${s.id}:`)||k.startsWith(`${id}:`))))songs.set(id,{...s,id,retained:s.importedInfo?s.retained:true});}
  for(const c of oldCharts){
   const id=resolveChartId(canonicalChartId(c.id),incoming.songIdentities?.redirects),songId=resolveSongId(canonicalSongId(c.songId),incoming.songIdentities?.redirects);
   if(!charts.has(id)&&songs.has(songId)&&(previous||state.manualCharts?.[c.id]||state.manualCharts?.[id]||state.playData?.records[c.id]||state.playData?.records[id]||state.playData?.history?.[c.id]||state.playData?.history?.[id]||Object.keys(state.notes).some(key=>key===c.id||key.startsWith(`${c.id}:`)||key===id||key.startsWith(`${id}:`))))charts.set(id,{...c,id,songId,retained:c.importedInfo?c.retained:true});

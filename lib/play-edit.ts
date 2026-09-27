@@ -25,7 +25,7 @@ export function applyManualPlay(state:AppState,chart:Chart,input:ManualPlayInput
   manual:{...base.manual,...(changesScore?{score:now}:{}),...(changesLamp?{lamp:now}:{})},
  });
  history[chart.id]={...history[chart.id],[key]:score};
- return {...state,playData:{records:{...state.playData?.records,[chart.id]:score},imports:{...state.playData?.imports},history}};
+ return {...state,playData:{...state.playData,records:{...state.playData?.records,[chart.id]:score},imports:{...state.playData?.imports},history}};
 }
 
 export function playSeriesCounts(history:PlayHistory){
@@ -50,5 +50,6 @@ export function deletePlaySeries(state:AppState,version:number|null):AppState{
  }
  const imports={...state.playData?.imports};
  for(const mode of ['SP','DP'] as const)if(imports[mode]?.gameVersion===version||imports[mode]?.gameVersion===null)delete imports[mode];
- return {...state,playData:{records,history,imports}};
+ const songRecords=Object.fromEntries(Object.entries(state.playData?.songRecords??{}).flatMap(([id,rows])=>{const remaining={...rows};delete remaining[key];return Object.keys(remaining).length?[[id,remaining]]:[];}));
+ return {...state,playData:{records,history,imports,...(Object.keys(songRecords).length?{songRecords}:{})}};
 }
