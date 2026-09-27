@@ -1,3 +1,4 @@
+import {officialSeriesNumber,officialLastPlayed} from './official-score-csv';
 import {songNames} from './song-identity';
 import {z} from 'zod';
 import {difficulties,type AppState,type Chart,type Difficulty,type Mode,type Song} from './iidx-data';
@@ -14,7 +15,10 @@ export type PlayScore=z.infer<typeof playScoreSchema>;
 const stampSchema=z.object({at:date,count:z.number().int().min(0),gameVersion:z.number().int().min(1).max(999).nullable()}).strict();
 const chartIdSchema=z.string().regex(/^[^:\s]{1,160}:(SP|DP):(BEGINNER|NORMAL|HYPER|ANOTHER|LEGGENDARIA)$/);
 const seriesScoresSchema=z.record(z.string().regex(/^(unknown|[1-9]\d{0,2})$/),playScoreSchema).refine(scores=>Object.entries(scores).every(([key,score])=>key===playVersionKey(score.gameVersion)),'シリーズ番号が記録と一致しません。');
-export const playDataSchema=z.object({records:z.record(chartIdSchema,playScoreSchema),imports:z.object({SP:stampSchema.optional(),DP:stampSchema.optional()}).strict(),history:z.record(chartIdSchema,seriesScoresSchema).optional()}).strict();
+export const songPlayRecordSchema=z.object({gameVersion:z.number().int().min(1).max(999).nullable(),playCount:number,lastPlayedAt:date.nullable(),importedAt:date}).strict();
+export type SongPlayRecord=z.infer<typeof songPlayRecordSchema>;
+const songRecordsSchema=z.record(z.string().regex(/^[^:\s]{1,160}:(SP|DP)$/),z.record(z.string().regex(/^(unknown|[1-9]\d{0,2})$/),songPlayRecordSchema).refine(records=>Object.entries(records).every(([key,r])=>key===playVersionKey(r.gameVersion))));
+export const playDataSchema=z.object({records:z.record(chartIdSchema,playScoreSchema),imports:z.object({SP:stampSchema.optional(),DP:stampSchema.optional()}).strict(),history:z.record(chartIdSchema,seriesScoresSchema).optional(),songRecords:songRecordsSchema.optional()}).strict();
 export type PlayData=z.infer<typeof playDataSchema>;
 export type PlayHistory=NonNullable<PlayData['history']>;
 export const playVersionKey=(version:number|null)=>version===null?'unknown':String(version);
@@ -28,12 +32,12 @@ export function collectPlayHistory(data:PlayData|undefined):PlayHistory{
  }
  return history;
 }
-export type PlayEntry={mode:Mode;title:string;artist?:string;difficulty:Difficulty;level:number;score:PlayScore};
-export type PlayImport={entries:PlayEntry[];legacy:boolean;duplicates:number};
+export type PlayEntry={mode:Mode;title:string;artist?:string;difficulty:Difficulty;level:number;score:PlayScore;songRecord?:SongPlayRecord};
+export type PlayImport={entries:PlayEntry[];legacy:boolean;duplicates:number;official?:{seriesName:string;gameVersion:number|null}};
 export class PlayModeRequired extends Error{constructor(){super('このCSVにはSP・DPの区別がありません。取得したモードを選んでください。');}}
 
 // A quoted CSV field may contain commas, quotes and line breaks. Reject incomplete data.
-export function readPlayCsv(text:string):string[][]{
+export function readPlayCsv(text:string,allowBareQuotes=false):string[][]{
  if(text.length>8_000_000)throw new Error('テキストが大きすぎます。取得したデータだけを貼り付けてください。');
  const csv=text.trim().replace(/^\uFEFF/,''),rows:string[][]=[];let row:string[]=[],field='',quoted=false,closed=false;
  const pushField=()=>{row.push(field);field='';closed=false;if(row.length>80)throw new Error('CSVの列数が多すぎます。');};
@@ -44,7 +48,7 @@ export function readPlayCsv(text:string):string[][]{
   else if(c===',')pushField();
   else if(c==='\n'||c==='\r'){if(c==='\r'&&csv[i+1]==='\n')i++;pushRow();}
   else if(c==='"'&&!field&&!closed)quoted=true;
-  else if(closed||c==='"')throw new Error('CSVの引用符が不正です。省略せずにコピーし直してください。');
+  else if(closed||(c==='"'&&!allowBareQuotes))throw new Error('CSVの引用符が不正です。省略せずにコピーし直してください。');
   else field+=c;
   if(field.length>3000)throw new Error('CSVの項目が長すぎます。');
  }
@@ -60,7 +64,10 @@ function numeric(v:string,max=200000):number|null{
 }
 
 export function parsePlayImport(text:string,legacyMode?:Mode,now=new Date().toISOString()):PlayImport{
- const [headers,...rows]=readPlayCsv(text);
+ const firstLine=readPlayCsv(text.trim().split(/\r?\n/,1)[0])[0]??[];
+ const officialHeader=['バージョン','タイトル','プレー回数','最終プレー日時'].every(h=>firstLine.includes(h));
+ // Konami exports literal quotes inside otherwise unquoted titles/artists.
+ const [headers,...rows]=readPlayCsv(text,officialHeader);
  if(!headers||!rows.length)throw new Error('取得したプレイデータを貼り付けてください。');
  if(new Set(headers.map(v=>v.trim())).size!==headers.length)throw new Error('CSVの見出しが重複しています。');
  const column=new Map(headers.map((name,i)=>[name.trim(),i]));
@@ -68,6 +75,7 @@ export function parsePlayImport(text:string,legacyMode?:Mode,now=new Date().toIS
  const legacy=!custom&&column.has('タイトル')&&['NORMAL','HYPER','ANOTHER'].every(d=>column.has(`${d} 難易度`)&&column.has(`${d} クリアタイプ`)&&column.has(`${d} スコア`));
  if(!custom&&!legacy)throw new Error('プレイデータの形式が違います。取得ツールの結果をコピーしてください。');
  if(legacy&&!legacyMode)throw new PlayModeRequired();
+ const official=legacy&&column.has('バージョン')&&column.has('プレー回数')&&column.has('最終プレー日時')?{seriesName:(rows.at(-1)![column.get('バージョン')!]??'').trim(),gameVersion:officialSeriesNumber(rows.at(-1)![column.get('バージョン')!]??'')}:undefined;
  const entries:PlayEntry[]=[],seen=new Set<string>();let duplicates=0;
  for(let index=0;index<rows.length;index++){
   const row=rows[index],get=(h:string)=>row[column.get(h)??-1]?.trim()??'';
@@ -87,23 +95,24 @@ export function parsePlayImport(text:string,legacyMode?:Mode,now=new Date().toIS
     const dj=value('DJ LEVEL','DJ LEVEL').toUpperCase();
     const score=playScoreSchema.parse({
      exScore:numeric(value('EXスコア','スコア')),pgreat:numeric(value('PGREAT','PGreat')),great:numeric(value('GREAT','Great')),
-     missCount:legacy?numeric(get(`${diff} ミスカウント`)):null,lamp:value('クリアタイプ','クリアタイプ'),djLevel:isBlank(dj)?null:dj,
-     gameVersion:custom?numeric(get('取得作品'),999):null,fetchedAt:custom?get('取得日時'):now,importedAt:now,
+     missCount:numeric(get(custom?'ミスカウント':`${diff} ミスカウント`)),lamp:value('クリアタイプ','クリアタイプ'),djLevel:isBlank(dj)?null:dj,
+     gameVersion:custom?numeric(get('取得作品'),999):official?.gameVersion??null,fetchedAt:custom?get('取得日時'):now,importedAt:now,
     });
     if(score.pgreat!==null&&score.great!==null&&score.exScore!==null&&score.pgreat*2+score.great!==score.exScore)throw new Error('EXスコアと判定数が一致しません。');
     // Official CLEAR TYPE and current-version score are independent values.
-    const entry:PlayEntry={mode,title,difficulty:diff as Difficulty,level,score,...(legacy&&!isBlank(get('アーティスト'))?{artist:get('アーティスト')}:{} )};
+    const entry:PlayEntry={mode,title,difficulty:diff as Difficulty,level,score,...(!isBlank(get('アーティスト'))?{artist:get('アーティスト')}:{} )};
+    if(official||(custom&&column.has('プレー回数')&&(!isBlank(get('プレー回数'))||!isBlank(get('最終プレー日時')))))entry.songRecord=songPlayRecordSchema.parse({gameVersion:score.gameVersion,playCount:numeric(get('プレー回数')),lastPlayedAt:official?officialLastPlayed(get('最終プレー日時')):isBlank(get('最終プレー日時'))?null:get('最終プレー日時'),importedAt:now});
     const key=JSON.stringify(entry);if(seen.has(key)){duplicates++;continue;}seen.add(key);entries.push(entry);
    }
   }catch(e){throw new Error(`${index+2}行目：${e instanceof z.ZodError?'項目の値を読み取れません。':e instanceof Error?e.message:'読み取れません。'} コピーした内容を確認してください。`);}
  }
  if(!entries.length)throw new Error('取り込める譜面がありません。取得範囲とデータを確認してください。');
- return {entries,legacy,duplicates};
+ return {entries,legacy,duplicates,...(official?{official}:{})};
 }
 
 export type PlayMatch={entry:PlayEntry;index:number;candidates:Chart[];target:Chart|null;reason:'matched'|'missing'|'ambiguous'|'duplicate'};
 export function playEntriesCsv(entries:PlayEntry[]):string{
- const rows=[playCsvHeaders,...entries.map(e=>[e.mode,e.title,e.difficulty,e.level,e.score.exScore,e.score.pgreat,e.score.great,e.score.lamp,e.score.djLevel,e.score.gameVersion,e.score.fetchedAt])];
+ const rows=[[...playCsvHeaders,'ミスカウント','プレー回数','最終プレー日時','アーティスト'],...entries.map(e=>[e.mode,e.title,e.difficulty,e.level,e.score.exScore,e.score.pgreat,e.score.great,e.score.lamp,e.score.djLevel,e.score.gameVersion,e.score.fetchedAt,e.score.missCount,e.songRecord?.playCount,e.songRecord?.lastPlayedAt,e.artist])];
  return rows.map(row=>row.map(value=>`"${String(value??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
 }
 export function playMatchIssue(match:PlayMatch):string{
@@ -141,18 +150,25 @@ export function matchPlayImport(data:PlayImport,songs:Song[],charts:Chart[],choi
  });
  const used=new Map<string,PlayMatch[]>();for(const m of matches)if(m.target){const key=`${m.target.id}:${playVersionKey(m.entry.score.gameVersion)}`;used.set(key,[...(used.get(key)??[]),m]);}
  for(const group of used.values())if(group.length>1)for(const match of group){match.target=null;match.reason='duplicate';}
+ // A song-level CSV row cannot be split across two database songs.
+ const groups=new Map<string,PlayMatch[]>();
+ for(const m of matches)if(m.entry.songRecord){const key=JSON.stringify([m.entry.mode,m.entry.title,m.entry.artist,m.entry.score.gameVersion]);groups.set(key,[...(groups.get(key)??[]),m]);}
+ for(const group of groups.values())if(new Set(group.filter(m=>m.target).map(m=>m.target!.songId)).size>1)for(const m of group){m.target=null;m.reason='ambiguous';}
  return matches;
 }
 
 export function applyPlayImport(state:AppState,matches:PlayMatch[],now=new Date().toISOString()):AppState{
  const accepted=matches.filter(m=>m.target);if(!accepted.length)throw new Error('取り込める譜面がありません。');
- const records={...state.playData?.records},imports={...state.playData?.imports},history=collectPlayHistory(state.playData);
+ const records={...state.playData?.records},imports={...state.playData?.imports},history=collectPlayHistory(state.playData),songRecords={...state.playData?.songRecords};
  for(const match of accepted){
   const id=match.target!.id,score={...match.entry.score,importedAt:now};
+  // Bookmarklet imports have no miss count; preserve an existing official value.
+  if(score.missCount===null)score.missCount=history[id]?.[playVersionKey(score.gameVersion)]?.missCount??null;
+  if(match.entry.songRecord){const songKey=`${match.target!.songId}:${match.entry.mode}`;songRecords[songKey]={...songRecords[songKey],[playVersionKey(score.gameVersion)]:{...match.entry.songRecord,gameVersion:score.gameVersion,importedAt:now}};}
   records[id]=score;history[id]={...history[id],[playVersionKey(score.gameVersion)]:score};
  }
  for(const mode of ['SP','DP'] as const){const rows=accepted.filter(m=>m.entry.mode===mode);if(rows.length){const versions=new Set(rows.map(m=>m.entry.score.gameVersion));imports[mode]={at:now,count:rows.length,gameVersion:versions.size===1?rows[0].entry.score.gameVersion:null};}}
- return {...state,playData:{records,imports,history}};
+ return {...state,playData:{records,imports,history,...(Object.keys(songRecords).length?{songRecords}:{})}};
 }
 export function matchesPlayFilter(score:PlayScore|undefined,filter:string){
  if(filter==='scored')return (score?.exScore??0)>0;

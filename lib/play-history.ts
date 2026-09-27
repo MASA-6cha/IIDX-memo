@@ -1,7 +1,7 @@
-import {type PlayHistory,type PlayScore} from './play-data';
+import {type PlayHistory,type PlayScore,type SongPlayRecord} from './play-data';
 
 export type ScoreSource='latest'|'best'|'unknown'|`version:${number}`;
-export type DisplayPlayScore=PlayScore&{best?:boolean;scoreVersion?:number|null;lampVersion?:number|null;lampFetchedAt?:string};
+export type DisplayPlayScore=PlayScore&{best?:boolean;scoreVersion?:number|null;lampVersion?:number|null;lampFetchedAt?:string;missVersion?:number|null};
 export const scoreSeriesLabel=(version:number|null)=>version===null?'シリーズ不明':`#${version}`;
 export function storedPlayVersions(history:PlayHistory){
  const versions=new Set<number>();let unknown=false;
@@ -26,7 +26,8 @@ export function bestPlayScore(scores:PlayScore[]):DisplayPlayScore|undefined{
  // Clear status carries over between releases; use the newest saved series.
  const {manual:originalManual,...base}=score;
  const manual={...(originalManual?.score?{score:originalManual.score}:{}),...(clear.manual?.lamp?{lamp:clear.manual.lamp}:{})};
- return {...base,lamp:clear.lamp,best:true,scoreVersion:score.gameVersion,lampVersion:clear.gameVersion,lampFetchedAt:clear.fetchedAt,...(Object.keys(manual).length?{manual}:{})};
+ const miss=scores.filter(s=>s.missCount!==null).reduce<PlayScore|undefined>((best,s)=>!best||s.missCount!<best.missCount!||(s.missCount===best.missCount&&newer(s,best))?s:best,undefined);
+ return {...base,missCount:miss?.missCount??null,missVersion:miss?.gameVersion,lamp:clear.lamp,best:true,scoreVersion:score.gameVersion,lampVersion:clear.gameVersion,lampFetchedAt:clear.fetchedAt,...(Object.keys(manual).length?{manual}:{})};
 }
 export function resolvePlayRecords(history:PlayHistory,source:ScoreSource):Record<string,DisplayPlayScore>{
  const latest=source==='latest'?storedPlayVersions(history).versions[0]:undefined;
@@ -44,4 +45,13 @@ export function scoreSourceLabel(source:ScoreSource,history:PlayHistory,seriesNa
  const version=source==='latest'?storedPlayVersions(history).versions[0]:Number(source.slice(8));
  if(version===undefined)return '最新の保存シリーズ';
  return `${source==='latest'?'最新：':''}#${version}${seriesNames[version]?` ${seriesNames[version]}`:''}`;
+}
+
+export function resolveSongPlayRecord(records:Record<string,SongPlayRecord>|undefined,source:ScoreSource,history:PlayHistory):SongPlayRecord|undefined{
+ if(!records)return undefined;
+ if(source!=='best'){const latest=storedPlayVersions(history).versions[0];const key=source==='latest'?(latest===undefined?'unknown':String(latest)):source.startsWith('version:')?source.slice(8):'unknown';return records[key];}
+ const all=Object.values(records),known=all.filter(r=>r.gameVersion!==null),rows=known.length?known:all;
+ if(!rows.length)return undefined;
+ const counts=rows.filter(r=>r.playCount!==null),dates=rows.flatMap(r=>r.lastPlayedAt?[r.lastPlayedAt]:[]).sort();
+ return {gameVersion:null,playCount:counts.length?counts.reduce((sum,r)=>sum+r.playCount!,0):null,lastPlayedAt:dates.at(-1)??null,importedAt:rows.map(r=>r.importedAt).sort().at(-1)!};
 }
