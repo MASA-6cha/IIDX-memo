@@ -71,20 +71,26 @@ export function parsePlayImport(text:string,legacyMode?:Mode,now=new Date().toIS
  if(!headers||!rows.length)throw new Error('取得したプレイデータを貼り付けてください。');
  if(new Set(headers.map(v=>v.trim())).size!==headers.length)throw new Error('CSVの見出しが重複しています。');
  const column=new Map(headers.map((name,i)=>[name.trim(),i]));
+ // Older official files call the same score column EXスコア.
+ for(const diff of difficulties)if(!column.has(`${diff} スコア`)&&column.has(`${diff} EXスコア`))column.set(`${diff} スコア`,column.get(`${diff} EXスコア`)!);
  const custom=playCsvHeaders.every(h=>column.has(h));
  const legacy=!custom&&column.has('タイトル')&&['NORMAL','HYPER','ANOTHER'].every(d=>column.has(`${d} 難易度`)&&column.has(`${d} クリアタイプ`)&&column.has(`${d} スコア`));
  if(!custom&&!legacy)throw new Error('プレイデータの形式が違います。取得ツールの結果をコピーしてください。');
  if(legacy&&!legacyMode)throw new PlayModeRequired();
  const official=legacy&&column.has('バージョン')&&column.has('プレー回数')&&column.has('最終プレー日時')?{seriesName:(rows.at(-1)![column.get('バージョン')!]??'').trim(),gameVersion:officialSeriesNumber(rows.at(-1)![column.get('バージョン')!]??'')}:undefined;
  const entries:PlayEntry[]=[],seen=new Set<string>();let duplicates=0;
+ // Before IIDX 27, official exports represent LEGGENDARIA as separate songs.
+ const separateLeggendaria=!!official&&official.gameVersion!==null&&official.gameVersion>=21&&official.gameVersion<=26&&!column.has('LEGGENDARIA 難易度');
+ const oldSongRows=new Map<string,Map<string,SongPlayRecord>>(),oldLeggendariaGroups=new Set<string>();
  for(let index=0;index<rows.length;index++){
   const row=rows[index],get=(h:string)=>row[column.get(h)??-1]?.trim()??'';
   try{
    if(row.length!==headers.length)throw new Error('列が不足しています。');
-   const title=get('タイトル');if(!title||title.length>512)throw new Error('曲名が不正です。');
+   const rawTitle=get('タイトル'),isOldLeggendaria=separateLeggendaria&&/†(?:LEGGENDARIA)?$/i.test(rawTitle);
+   const title=isOldLeggendaria?rawTitle.replace(/†(?:LEGGENDARIA)?$/i,'').trimEnd():rawTitle;if(!title||title.length>512)throw new Error('曲名が不正です。');
    const mode=custom?get('プレースタイル'):legacyMode!;
    if(mode!=='SP'&&mode!=='DP')throw new Error('SP・DPを判別できません。');
-   const diffs=custom?[get('譜面')]:difficulties.filter(d=>column.has(`${d} 難易度`));
+   const diffs=isOldLeggendaria?['ANOTHER']:custom?[get('譜面')]:difficulties.filter(d=>column.has(`${d} 難易度`));
    for(const diff of diffs){
     if(!difficulties.includes(diff as Difficulty))throw new Error('譜面難易度を読み取れません。');
     const level=numeric(get(custom?'難度':`${diff} 難易度`),12);
@@ -100,13 +106,29 @@ export function parsePlayImport(text:string,legacyMode?:Mode,now=new Date().toIS
     });
     if(score.pgreat!==null&&score.great!==null&&score.exScore!==null&&score.pgreat*2+score.great!==score.exScore)throw new Error('EXスコアと判定数が一致しません。');
     // Official CLEAR TYPE and current-version score are independent values.
-    const entry:PlayEntry={mode,title,difficulty:diff as Difficulty,level,score,...(!isBlank(get('アーティスト'))?{artist:get('アーティスト')}:{} )};
+    const entry:PlayEntry={mode,title,difficulty:isOldLeggendaria?'LEGGENDARIA':diff as Difficulty,level,score,...(!isBlank(get('アーティスト'))?{artist:get('アーティスト')}:{} )};
     if(official||(custom&&column.has('プレー回数')&&(!isBlank(get('プレー回数'))||!isBlank(get('最終プレー日時')))))entry.songRecord=songPlayRecordSchema.parse({gameVersion:score.gameVersion,playCount:numeric(get('プレー回数')),lastPlayedAt:official?officialLastPlayed(get('最終プレー日時')):isBlank(get('最終プレー日時'))?null:get('最終プレー日時'),importedAt:now});
+    if(separateLeggendaria&&entry.songRecord){
+     const groupKey=`${mode}:${playTitleFormatKey(title)}`,sourceKey=playTitleKey(rawTitle),group=oldSongRows.get(groupKey)??new Map<string,SongPlayRecord>();
+     const previous=group.get(sourceKey);
+     if(previous&&JSON.stringify(previous)!==JSON.stringify(entry.songRecord))throw new Error('同じ曲のプレー回数・日時が複数あります。CSVの重複行を確認してください。');
+     group.set(sourceKey,entry.songRecord);oldSongRows.set(groupKey,group);
+     if(isOldLeggendaria)oldLeggendariaGroups.add(groupKey);
+    }
     const key=JSON.stringify(entry);if(seen.has(key)){duplicates++;continue;}seen.add(key);entries.push(entry);
    }
   }catch(e){throw new Error(`${index+2}行目：${e instanceof z.ZodError?'項目の値を読み取れません。':e instanceof Error?e.message:'読み取れません。'} コピーした内容を確認してください。`);}
  }
  if(!entries.length)throw new Error('取り込める譜面がありません。取得範囲とデータを確認してください。');
+ // Share the combined metadata on every difficulty, so partial imports and
+ // copying unresolved charts cannot discard or count the companion row twice.
+ for(const entry of entries){
+  const key=`${entry.mode}:${playTitleFormatKey(entry.title)}`;
+  if(!oldLeggendariaGroups.has(key))continue;
+  const rows=[...oldSongRows.get(key)!.values()],counts=rows.flatMap(r=>r.playCount===null?[]:[r.playCount]);
+  const dates=rows.flatMap(r=>r.lastPlayedAt?[r.lastPlayedAt]:[]).sort();
+  entry.songRecord=songPlayRecordSchema.parse({...entry.songRecord,playCount:counts.length?counts.reduce((a,b)=>a+b,0):null,lastPlayedAt:dates.at(-1)??null});
+ }
  return {entries,legacy,duplicates,...(official?{official}:{})};
 }
 
