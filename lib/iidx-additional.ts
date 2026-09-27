@@ -48,8 +48,9 @@ export function enrichCatalog(catalog:Catalog,payload:unknown[]):Catalog{
  const cpi=cpiSchema.parse(payload[7]);
  if([spRadar,dpRadar,sp12,sp11,dp,cpi].some(x=>Object.keys(x).length<100))throw new Error('追加データの件数が少なすぎるため更新を中止しました。');
  const counts={radarCharts:0,sp11Charts:0,sp12Charts:0,dpCharts:0,cpiCharts:0};
+ const sourceIds=new Map(catalog.songs.map(song=>[song.id,song.publicId??song.id]));
  const charts=catalog.charts.map(chart=>{
-  const rawId=chart.songId.replace(/^idt-/,''),index=difficulties.indexOf(chart.difficulty),key=chart.difficulty[0] as z.infer<typeof diffKey>;
+  const rawId=(sourceIds.get(chart.songId)??chart.songId).replace(/^idt-/,''),index=difficulties.indexOf(chart.difficulty),key=chart.difficulty[0] as z.infer<typeof diffKey>;
   const source=(chart.mode==='SP'?spRadar:dpRadar)[rawId],community:NonNullable<Chart['community']>={};
   const radar=source&&source.notes[index]>0?{values:radarAxes.map(a=>source[a.key]?.[index]??null) as RadarValues,notes:source.notes[index]}:null;
   if(radar)counts.radarCharts++;

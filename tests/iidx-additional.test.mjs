@@ -65,3 +65,9 @@ test('CPI uses SP level 12 chart IDs, all clear types and JSON-safe missing/infi
  const original=structuredClone(f.catalog);f.payload[7]['1258'].A.hard.cpi_value=-4;
  assert.throws(()=>enrichCatalog(f.catalog,f.payload));assert.deepEqual(f.catalog,original);
 });
+
+test('An imported-first canonical ID uses its saved public ID for every difficulty table',()=>{
+ const f=fixture();f.catalog.songs=[{id:'arcade-12058',publicId:'idt-1258',title:'解析名',artist:'解析artist'}];
+ f.catalog.charts=f.catalog.charts.slice(0,2).map(c=>({...c,id:c.id.replace('idt-1258','arcade-12058'),songId:'arcade-12058'}));
+ const result=enrichCatalog(f.catalog,f.payload);assert.equal(chartRating(result.charts[0],'sp12','hard').label,'地力S+');assert.equal(chartRating(result.charts[1],'dp','hard').value,12.5);assert.equal(result.charts[0].community.cpi.hard.value,1986.05);
+});

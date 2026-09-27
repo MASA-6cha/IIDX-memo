@@ -10,7 +10,7 @@ const {calculateActivity}=await loadSource('../lib/my-activity.ts');
 const sample=JSON.parse(readFileSync(new URL('./fixtures/catalog-import.json',import.meta.url),'utf8'));
 const input=()=>structuredClone(sample),parse=value=>parseCatalogImport(JSON.stringify(value));
 const origin={label:'songs.json'},at='2026-09-24T00:00:00.000Z';
-const existing=()=>({schemaVersion:1,source:'iidx-data-table',fetchedAt:at,sourceUpdatedAt:null,seriesNames:{19:'Lincle'},songs:[{id:'idt-1971',title:'quaver♪',artist:'Risk Junk',series:19,removed:false,bpm:'186',soflan:false}],charts:[{id:'idt-1971:SP:ANOTHER',songId:'idt-1971',mode:'SP',difficulty:'ANOTHER',level:11,bpm:'186',noteCount:1700,unofficialRatings:{},radar:{values:[100,100,100,100,100,100],notes:1700},community:{sp12:{normal:{value:1,label:'A'},hard:null}}}],additionalData:{radarCharts:1,sp11Charts:0,sp12Charts:1,dpCharts:0}});
+const existing=()=>({schemaVersion:1,source:'iidx-data-table',fetchedAt:at,sourceUpdatedAt:null,seriesNames:{19:'Lincle'},songs:[{id:'idt-1964',title:'quaver♪',artist:'Risk Junk',series:19,removed:false,bpm:'186',soflan:false}],charts:[{id:'idt-1964:SP:ANOTHER',songId:'idt-1964',mode:'SP',difficulty:'ANOTHER',level:11,bpm:'186',noteCount:1700,unofficialRatings:{},radar:{values:[100,100,100,100,100,100],notes:1700},community:{sp12:{normal:{value:1,label:'A'},hard:null}}}],additionalData:{radarCharts:1,sp11Charts:0,sp12Charts:1,dpCharts:0}});
 
 test('Per-chart IIDX 33 availability overrides song status and survives public DB refresh',()=>{
  const value=input(),song=value.songs[0];
@@ -22,7 +22,7 @@ test('Per-chart IIDX 33 availability overrides song status and survives public D
  const status=difficulty=>{const chart=first.charts.find(c=>c.mode==='SP'&&c.difficulty===difficulty);return chartAvailability(chart,first.songs[0]);};
  assert.equal(status('ANOTHER'),'not_included');assert.equal(status('NORMAL'),'included');assert.equal(status('HYPER'),'unknown');
  const refreshed=mergeCatalog(first,existing(),initialState()).catalog;
- assert.equal(chartAvailability(refreshed.charts.find(c=>c.id==='idt-1971:SP:ANOTHER'),refreshed.songs[0]),'not_included');
+ assert.equal(chartAvailability(refreshed.charts.find(c=>c.id==='idt-1964:SP:ANOTHER'),refreshed.songs[0]),'not_included');
  assert(!JSON.stringify(refreshed).includes('PRIVATE_DISK_PATH'));
 });
 
@@ -35,22 +35,22 @@ test('The supplied format maps all seven charts, SOF-LAN and false features with
 });
 
 test('Imports keep existing identities, series, availability and community data; unrelated data and histories survive',()=>{
- const base=existing(),state=initialState();state.notes['idt-1971:SP:ANOTHER:1P']=blankNote();state.folders[0].songIds=['idt-1971'];
- state.playData={records:{'idt-1971:SP:ANOTHER':{exScore:3000,gameVersion:33}},history:{'idt-1971:SP:ANOTHER':{'33':{exScore:3000,gameVersion:33}}}};
+ const base=existing(),state=initialState();state.notes['idt-1964:SP:ANOTHER:1P']=blankNote();state.folders[0].songIds=['idt-1964'];
+ state.playData={records:{'idt-1964:SP:ANOTHER':{exScore:3000,gameVersion:33}},history:{'idt-1964:SP:ANOTHER':{'33':{exScore:3000,gameVersion:33}}}};
  const before=JSON.stringify({base,state}),result=mergeCatalogImport(base,parse(input()),origin,at);
  assert.equal(result.updatedSongs,1);assert.equal(result.addedSongs,0);assert.equal(result.updatedCharts,1);assert.equal(result.addedCharts,6);
  assert.equal(result.catalog.songs[0].series,19);assert.equal(result.catalog.songs[0].removed,false);
- const chart=result.catalog.charts.find(c=>c.id==='idt-1971:SP:ANOTHER');assert.equal(chart.noteCount,1745);assert.equal(chart.level,12);assert.equal(chart.community.sp12.normal.label,'A');
+ const chart=result.catalog.charts.find(c=>c.id==='idt-1964:SP:ANOTHER');assert.equal(chart.noteCount,1745);assert.equal(chart.level,12);assert.equal(chart.community.sp12.normal.label,'A');
  assert.equal(chart.radar.values[0],157.37);assert(isStoredCatalog(JSON.parse(JSON.stringify(result.catalog))));
  assert.equal(JSON.stringify({base,state}),before);assert.deepEqual(migrateLegacyState(state,result.catalog).state.playData.history,state.playData.history);
- const stats=calculateActivity(result.catalog.charts,result.catalog.songs,{'idt-1971:SP:ANOTHER':{exScore:3000,gameVersion:33,lamp:'CLEAR',djLevel:'AA'}},'SP','available');
+ const stats=calculateActivity(result.catalog.charts,result.catalog.songs,{'idt-1964:SP:ANOTHER':{exScore:3000,gameVersion:33,lamp:'CLEAR',djLevel:'AA'}},'SP','available');
  assert.equal(stats.axes[0].top[0].value,135.27);
 });
 
 test('Public refresh preserves imported values including null, yet refreshes community and never drops imported charts',()=>{
  const data=input();data.songs[0].charts.SPA.radar=null;
  const imported=mergeCatalogImport(existing(),parse(data),origin,at).catalog,next=existing();next.charts[0].community.sp12.normal.label='B';next.charts[0].level=10;
- const refreshed=mergeCatalog(imported,next,initialState()).catalog,c=refreshed.charts.find(c=>c.id==='idt-1971:SP:ANOTHER');
+ const refreshed=mergeCatalog(imported,next,initialState()).catalog,c=refreshed.charts.find(c=>c.id==='idt-1964:SP:ANOTHER');
  assert.equal(c.level,12);assert.equal(c.noteCount,1745);assert.equal(c.radar,null);assert.equal(c.community.sp12.normal.label,'B');assert.equal(refreshed.charts.length,7);
  assert(refreshed.charts.every(c=>!c.retained));assert.equal(refreshed.importedData.label,'songs.json');
 });
@@ -83,10 +83,10 @@ test('Null radar and missing axes remain unknown; zero is kept and absent fields
  assert.equal(second.charts.length,7);assert.deepEqual(next.radar.values,c.radar.values);assert.equal(next.noteCount,null);assert.deepEqual(next.importedInfo.features,c.importedInfo.features);
 });
 
-test('Ambiguous titles, artist mismatches, and conflicting music IDs are held for review instead of overwriting',()=>{
+test('Known public IDs resolve spelling and artist differences; conflicting music IDs are held',()=>{
  const base=existing();base.songs.push({...base.songs[0],id:'duplicate'});
- let result=mergeCatalogImport(base,parse(input()),origin,at);assert.equal(result.acceptedCharts,0);assert.equal(result.issues.length,1);
- const changed=input();changed.songs[0].artist='A different artist';result=mergeCatalogImport(existing(),parse(changed),origin,at);assert.equal(result.acceptedCharts,0);
+ let result=mergeCatalogImport(base,parse(input()),origin,at);assert.equal(result.acceptedCharts,7);assert.equal(result.issues.length,0);
+ const changed=input();changed.songs[0].artist='A different artist';result=mergeCatalogImport(existing(),parse(changed),origin,at);assert.equal(result.acceptedCharts,7);assert.equal(result.catalog.songs[0].artist,'A different artist');
  const first=mergeCatalogImport(existing(),parse(input()),origin,at).catalog;const conflict=input();conflict.songs[0].music_id=19072;
  result=mergeCatalogImport(first,parse(conflict),origin,at);assert.equal(result.acceptedCharts,0);assert.equal(result.catalog.charts.length,7);
 });
@@ -113,8 +113,8 @@ test('Published JSON supports unknown levels and unavailable BPM without droppin
  const data=parse(value),newCatalog=mergeCatalogImport(null,data,origin,at).catalog;
  assert.equal(data.chartCount,7);assert.equal(newCatalog.charts.find(c=>c.mode==='SP'&&c.difficulty==='ANOTHER').level,0);
  const updated=mergeCatalogImport(existing(),data,origin,at).catalog;
- assert.equal(updated.charts.find(c=>c.id==='idt-1971:SP:ANOTHER').level,11);
- assert.equal(mergeCatalog(updated,existing(),initialState()).catalog.charts.find(c=>c.id==='idt-1971:SP:ANOTHER').level,11);
+ assert.equal(updated.charts.find(c=>c.id==='idt-1964:SP:ANOTHER').level,11);
+ assert.equal(mergeCatalog(updated,existing(),initialState()).catalog.charts.find(c=>c.id==='idt-1964:SP:ANOTHER').level,11);
 
  const {buildDifficultyFolders}=await loadSource('../lib/difficulty-folders.ts');
  const folders=buildDifficultyFolders(newCatalog.charts,newCatalog.charts,{table:'official',mode:'SP',gauge:'normal',cpiGauge:'hard'});
@@ -137,9 +137,9 @@ test('Title source follows each song, not the last imported file, after public r
  const first=mergeCatalogImport(existing(),parse(input()),firstOrigin,at).catalog;
  const other=input();other.songs[0].music_id=99001;other.songs[0].title='Other song';
  const second=mergeCatalogImport(first,parse(other),{label:'second.json'},at).catalog;
- assert.equal(songTitleOrigin(second.songs.find(s=>s.id==='idt-1971'),second).label,'first.json');
+ assert.equal(songTitleOrigin(second.songs.find(s=>s.id==='idt-1964'),second).label,'first.json');
  const refreshed=mergeCatalog(second,existing(),initialState()).catalog;
- assert.equal(songTitleOrigin(refreshed.songs.find(s=>s.id==='idt-1971'),refreshed).url,firstOrigin.url);
+ assert.equal(songTitleOrigin(refreshed.songs.find(s=>s.id==='idt-1964'),refreshed).url,firstOrigin.url);
  const legacy=structuredClone(first);delete legacy.songs[0].importedInfo.origin;
  assert.match(songTitleOrigin(legacy.songs[0],legacy).label,/未記録/);
 });

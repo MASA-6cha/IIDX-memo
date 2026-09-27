@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {difficulties,seriesNames,songs as sampleSongs,charts as sampleCharts,type AppState,type Catalog,type Chart,type Song,type Mode} from './iidx-data';
 import {additionalFiles,enrichCatalog} from './iidx-additional';
+import {reconcileSongIdentities,resolveSongId,resolveChartId} from './song-identity';
 import {collectPlayHistory} from './play-data';
 import {preserveImportedCatalog,stripSupplement,applySavedSupplement} from './catalog-import';
 
@@ -74,19 +75,21 @@ export async function fetchCatalog(onProgress:(completed:number,total:number)=>v
 
 export function migrateLegacyState(state:AppState,catalog:Catalog):{state:AppState;moved:number;conflicts:number}{
  const songIds=new Set(catalog.songs.map(s=>s.id)),notes={...state.notes};let moved=0,conflicts=0;
+ const redirects={...state.songIdentities?.redirects,...catalog.songIdentities?.redirects};
+ const chartId=(id:string)=>resolveChartId(canonicalChartId(id),redirects),songId=(id:string)=>resolveSongId(canonicalSongId(id),redirects);
  for(const [key,note] of Object.entries(state.notes)){
-  const next=canonicalChartId(key);if(next===key||!songIds.has(next.split(':')[0]))continue;
+  const next=chartId(key);if(next===key||!songIds.has(next.split(':')[0]))continue;
   if(notes[next]&&JSON.stringify(notes[next])!==JSON.stringify(note)){conflicts++;continue;}
   notes[next]=note;delete notes[key];moved++;
  }
  const manualCharts={...state.manualCharts};
- for(const [id,value] of Object.entries(manualCharts)){const next=canonicalChartId(id);if(next!==id&&songIds.has(next.split(':')[0])&&!manualCharts[next]){manualCharts[next]=value;delete manualCharts[id];}}
- const folders=state.folders.map(f=>({...f,songIds:Array.from(new Set(f.songIds.map(id=>songIds.has(canonicalSongId(id))?canonicalSongId(id):id)))}));
+ for(const [id,value] of Object.entries(manualCharts)){const next=chartId(id);if(next!==id&&songIds.has(next.split(':')[0])){if(manualCharts[next]&&JSON.stringify(manualCharts[next])!==JSON.stringify(value)){conflicts++;continue;}manualCharts[next]=value;delete manualCharts[id];}}
+ const folders=state.folders.map(f=>({...f,songIds:Array.from(new Set(f.songIds.map(id=>songIds.has(songId(id))?songId(id):id)))}));
  const records={...state.playData?.records};
- for(const [key,score] of Object.entries(records)){const next=canonicalChartId(key);if(next===key||!songIds.has(next.split(':')[0]))continue;if(records[next]&&JSON.stringify(records[next])!==JSON.stringify(score)){conflicts++;continue;}records[next]=score;delete records[key];}
+ for(const [key,score] of Object.entries(records)){const next=chartId(key);if(next===key||!songIds.has(next.split(':')[0]))continue;if(records[next]&&JSON.stringify(records[next])!==JSON.stringify(score)){conflicts++;continue;}records[next]=score;delete records[key];}
  const history=collectPlayHistory(state.playData);
  for(const [key,scores] of Object.entries(history)){
-  const next=canonicalChartId(key);if(next===key||!songIds.has(next.split(':')[0]))continue;
+  const next=chartId(key);if(next===key||!songIds.has(next.split(':')[0]))continue;
   const target={...history[next]},remaining:typeof scores={};
   for(const [version,score] of Object.entries(scores)){
    if(target[version]&&JSON.stringify(target[version])!==JSON.stringify(score)){remaining[version]=score;conflicts++;}
@@ -94,21 +97,22 @@ export function migrateLegacyState(state:AppState,catalog:Catalog):{state:AppSta
   }
   history[next]=target;if(Object.keys(remaining).length)history[key]=remaining;else delete history[key];
  }
- return {state:{...state,notes,folders,...(state.manualCharts?{manualCharts}:{}),...(state.playData?{playData:{...state.playData,records,history}}:{})},moved,conflicts};
+ return {state:{...state,notes,folders,...(catalog.songIdentities?{songIdentities:{links:{...state.songIdentities?.links,...catalog.songIdentities.links},redirects}}:{}),...(state.manualCharts?{manualCharts}:{}),...(state.playData?{playData:{...state.playData,records,history}}:{})},moved,conflicts};
 }
 
 export function mergeCatalog(previous:Catalog|null,incoming:Catalog,state:AppState){
  const supplementData=incoming.supplementData??previous?.supplementData;
  previous=stripSupplement(previous);incoming=stripSupplement(incoming)!;
- incoming=preserveImportedCatalog(previous,incoming);
+ incoming={...incoming,songIdentities:{links:{...state.songIdentities?.links,...previous?.songIdentities?.links,...incoming.songIdentities?.links},redirects:{...state.songIdentities?.redirects,...previous?.songIdentities?.redirects,...incoming.songIdentities?.redirects}}};
+ incoming=reconcileSongIdentities(preserveImportedCatalog(previous,incoming));
  const songs=new Map(incoming.songs.map(s=>[s.id,s])),charts=new Map(incoming.charts.map(c=>[c.id,c]));
  const oldSongs=previous?.songs??sampleSongs,oldCharts=previous?.charts??sampleCharts;
- for(const s of oldSongs){const id=canonicalSongId(s.id);if(!songs.has(id)&&(previous||state.folders.some(f=>f.songIds.includes(s.id))||[...Object.keys(state.notes),...Object.keys(state.manualCharts??{}),...Object.keys(state.playData?.records??{}),...Object.keys(state.playData?.history??{})].some(k=>k.startsWith(`${s.id}:`)||k.startsWith(`${id}:`))))songs.set(id,{...s,id,retained:s.importedInfo?s.retained:true});}
+ for(const s of oldSongs){const id=resolveSongId(canonicalSongId(s.id),incoming.songIdentities?.redirects);if(!songs.has(id)&&(previous||state.folders.some(f=>f.songIds.includes(s.id))||[...Object.keys(state.notes),...Object.keys(state.manualCharts??{}),...Object.keys(state.playData?.records??{}),...Object.keys(state.playData?.history??{})].some(k=>k.startsWith(`${s.id}:`)||k.startsWith(`${id}:`))))songs.set(id,{...s,id,retained:s.importedInfo?s.retained:true});}
  for(const c of oldCharts){
-  const id=canonicalChartId(c.id),songId=canonicalSongId(c.songId);
+  const id=resolveChartId(canonicalChartId(c.id),incoming.songIdentities?.redirects),songId=resolveSongId(canonicalSongId(c.songId),incoming.songIdentities?.redirects);
   if(!charts.has(id)&&songs.has(songId)&&(previous||state.manualCharts?.[c.id]||state.manualCharts?.[id]||state.playData?.records[c.id]||state.playData?.records[id]||state.playData?.history?.[c.id]||state.playData?.history?.[id]||Object.keys(state.notes).some(key=>key===c.id||key.startsWith(`${c.id}:`)||key===id||key.startsWith(`${id}:`))))charts.set(id,{...c,id,songId,retained:c.importedInfo?c.retained:true});
  }
- const catalog:Catalog=applySavedSupplement({...incoming,supplementData,seriesNames:{...previous?.seriesNames,...incoming.seriesNames},songs:Array.from(songs.values()),charts:Array.from(charts.values())});
+ const catalog:Catalog=applySavedSupplement(reconcileSongIdentities({...incoming,supplementData,seriesNames:{...previous?.seriesNames,...incoming.seriesNames},songs:Array.from(songs.values()),charts:Array.from(charts.values())}));
  const oldSongIds=new Set((previous?.songs??[]).map(s=>s.id)),oldChartIds=new Set((previous?.charts??[]).map(c=>c.id));
  return {catalog,addedSongs:incoming.songs.filter(s=>!oldSongIds.has(s.id)).length,addedCharts:incoming.charts.filter(c=>!oldChartIds.has(c.id)).length,retainedCharts:catalog.charts.filter(c=>c.retained).length};
 }

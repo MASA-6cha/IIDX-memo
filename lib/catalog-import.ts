@@ -1,6 +1,8 @@
 import {z} from 'zod';
 import {normalized,songs as sampleSongs,type Catalog,type Chart,type Song,type Difficulty,type RadarValues,type ImportedChartInfo,type ImportedSongInfo} from './iidx-data';
 import {canonicalSongId} from './iidx-ids';
+import {songNames,identityPublicId,publicSongId,rememberSongNames,reconcileSongIdentities,applyAnalyzedChart} from './song-identity';
+import {playTitleFormatKey} from './play-title';
 
 export const DEFAULT_CATALOG_IMPORT_URL='https://raw.githubusercontent.com/MASA-6cha/iidx-song-data/main/songs.json';
 export const SUPPLEMENT_CATALOG_URL='https://raw.githubusercontent.com/MASA-6cha/iidx-song-data/main/iidx34-songs.json';
@@ -21,13 +23,19 @@ const rawChart=z.object({
 const rawSong=z.object({music_id:z.number().int().min(1).max(999999999),title:z.string().trim().min(1).max(512).nullable(),artist:z.string().max(1024).nullable(),genre:z.string().max(512).nullable().optional(),charts:z.record(z.unknown())});
 export type ImportedChart=Omit<ImportedChartInfo,'importedAt'>&{mode:'SP'|'DP';difficulty:Difficulty};
 export type ImportedSong=Omit<ImportedSongInfo,'importedAt'|'musicId'>&{musicId:number|null;supplementId?:string;version?:number;charts:ImportedChart[]};
-export type CatalogImport={kind?:'supplement';songs:ImportedSong[];chartCount:number;warningCount:number;skippedEmptyCharts:number;skippedUnnamedSongs:number};
+export type CatalogImport={kind?:'supplement'|'identities';identityLinks?:{musicId:number;publicId:string}[];songs:ImportedSong[];chartCount:number;warningCount:number;skippedEmptyCharts:number;skippedUnnamedSongs:number};
 export type ImportOrigin={label:string;url?:string};
 export type CatalogImportIssue={musicId:number|null;title:string;reason:string};
 
 export function parseCatalogImport(text:string):CatalogImport{
  if(text.length>CATALOG_IMPORT_MAX_BYTES)throw new Error('JSONは32MB以下のファイルを選んでください。');
  let value:unknown;try{value=JSON.parse(text.replace(/^\uFEFF/,''));}catch{throw new Error('JSONを読み取れませんでした。songs.jsonを選んでください。');}
+ if(value&&typeof value==='object'&&'schema' in value&&value.schema==='iidx-song-identities/1'){
+  const mapped=z.object({schema:z.literal('iidx-song-identities/1'),links:z.array(z.object({music_id:z.number().int().min(1).max(999999999),song_key:z.string().regex(/^iidx-data-table:\d{1,12}$/)})).min(1).max(20000)}).safeParse(value);
+  if(!mapped.success)throw new Error('曲ID対応表の形式が不正です。');
+  const links=mapped.data.links;if(new Set(links.map(x=>x.music_id)).size!==links.length||new Set(links.map(x=>x.song_key)).size!==links.length)throw new Error('曲ID対応表は1対1で指定してください。');
+  return {kind:'identities',identityLinks:links.map(x=>({musicId:x.music_id,publicId:x.song_key.replace('iidx-data-table:','idt-')})),songs:[],chartCount:0,warningCount:0,skippedEmptyCharts:0,skippedUnnamedSongs:0};
+ }
  const root=z.object({schema:z.enum([schemaName,'iidx-song-supplement/1']),songs:z.array(z.unknown()).min(1).max(20000)}).safeParse(value);
  if(!root.success)throw new Error(`対応形式は「${schemaName}」または「iidx-song-supplement/1」です。schemaとsongsを確認してください。`);
  const supplement=root.data.schema==='iidx-song-supplement/1';
@@ -68,28 +76,33 @@ export function parseCatalogImport(text:string):CatalogImport{
  return {...(supplement?{kind:'supplement' as const}:{}),songs,chartCount,warningCount,skippedEmptyCharts,skippedUnnamedSongs};
 }
 
-const nameKey=(value:string)=>normalized(value).replace(/\s+/g,'');
+const nameKey=playTitleFormatKey;
 const songKey=(song:Pick<Song,'title'|'artist'>)=>JSON.stringify([nameKey(song.title),nameKey(song.artist)]);
 const sampleIds=new Map(sampleSongs.map(song=>[songKey(song),canonicalSongId(song.id)]));
 function indexSongs(songs:Song[]){
  const keys=new Map<string,Song[]>(),titles=new Map<string,Song[]>(),ids=new Map<number,Song[]>();
  const add=<K>(map:Map<K,Song[]>,key:K,song:Song)=>map.set(key,[...(map.get(key)??[]),song]);
- for(const song of songs){add(keys,songKey(song),song);add(titles,nameKey(song.title),song);if(song.importedInfo)add(ids,song.importedInfo.musicId,song);}
+ for(const song of songs){for(const name of songNames(song)){if(!(keys.get(songKey(name))??[]).some(s=>s.id===song.id))add(keys,songKey(name),song);if(!(titles.get(nameKey(name.title))??[]).some(s=>s.id===song.id))add(titles,nameKey(name.title),song);}if(song.importedInfo)add(ids,song.importedInfo.musicId,song);}
  return {keys,titles,ids};
 }
-function withChartInfo(chart:Chart,info:ImportedChartInfo):Chart{
- const result={...chart,level:info.level??chart.level,importedInfo:info};
- if(info.bpm!==undefined)result.bpm=info.bpm;if(info.soflan!==undefined)result.soflan=info.soflan;
- if(info.noteCount!==undefined)result.noteCount=info.noteCount;
- if(info.radarValues!==undefined)result.radar=info.radarValues===null?null:{values:info.radarValues,notes:result.noteCount??0};
- return result;
-}
-function withSongInfo(song:Song,info:ImportedSongInfo):Song{return {...song,title:info.title,artist:info.artist,...(info.genre!==undefined?{genre:info.genre}:{}),importedInfo:info};}
+const withChartInfo=applyAnalyzedChart;
+function withSongInfo(song:Song,info:ImportedSongInfo):Song{return rememberSongNames({...song,title:info.title,artist:info.artist,...(info.genre!==undefined?{genre:info.genre}:{}),importedInfo:info},song);}
 function recount(catalog:Catalog):Catalog{
  return {...catalog,...(catalog.additionalData?{additionalData:{...catalog.additionalData,radarCharts:catalog.charts.filter(c=>c.radar&&c.radar.values.some(v=>v!==null)).length}}:{})};
 }
 
-export function mergeCatalogImport(previous:Catalog|null,data:CatalogImport,origin:ImportOrigin,now=new Date().toISOString()){
+export type CatalogImportResult={catalog:Catalog;updatedSongs:number;addedSongs:number;updatedCharts:number;addedCharts:number;acceptedCharts:number;issues:CatalogImportIssue[];examples:{title:string;kind:'更新'|'追加';charts:number}[];linkedSongs?:number};
+export function mergeCatalogImport(previous:Catalog|null,data:CatalogImport,origin:ImportOrigin,now=new Date().toISOString()):CatalogImportResult{
+ if(data.kind==='identities'){
+  if(!previous)throw new Error('先に楽曲DBまたは解析JSONを取り込んでください。');
+  const links={...previous.songIdentities?.links};
+  for(const row of data.identityLinks??[]){if(links[row.musicId]&&links[row.musicId]!==row.publicId)throw new Error(`music_id ${row.musicId} は別の曲に対応済みです。`);links[row.musicId]=row.publicId;}
+  if(new Set(Object.values(links)).size!==Object.keys(links).length)throw new Error('同じ通常DB曲に複数のmusic_idを指定できません。');
+  for(const song of previous.songs)if(song.importedInfo&&publicSongId(song)&&links[song.importedInfo.musicId]&&links[song.importedInfo.musicId]!==publicSongId(song))throw new Error(`${song.title} は別の通常DB曲に対応済みです。`);
+  const catalog=applySavedSupplement(reconcileSongIdentities({...stripSupplement(previous)!,songIdentities:{links,redirects:{...previous.songIdentities?.redirects}}}));
+  return {catalog,updatedSongs:0,addedSongs:0,updatedCharts:0,addedCharts:0,acceptedCharts:0,linkedSongs:data.identityLinks?.length??0,issues:[],examples:[]};
+ }
+ previous=previous?reconcileStoredCatalog(previous):null;
  if(data.kind==='supplement')return mergeSupplement(previous,data,origin,now);
  const identities=previous?.songs??[];
  previous=stripSupplement(previous);
@@ -99,7 +112,8 @@ export function mergeCatalogImport(previous:Catalog|null,data:CatalogImport,orig
  let updatedSongs=0,addedSongs=0,updatedCharts=0,addedCharts=0,acceptedCharts=0;
  for(const input of data.songs){
   if(!input.charts.length)continue;
-  const byId=input.musicId===null?[]:lookup.ids.get(input.musicId)??[],byName=lookup.keys.get(songKey(input))??[];
+  const mapped=input.musicId===null?undefined:identityPublicId(input.musicId,catalog);
+  const byId=input.musicId===null?[]:lookup.ids.get(input.musicId)??[],byName=mapped?catalog.songs.filter(s=>publicSongId(s)===mapped):lookup.keys.get(songKey(input))??[];
   const candidates=byId.length?byId:byName;
   const reject=(reason:string)=>issues.push({musicId:input.musicId,title:input.title,reason});
   if(candidates.length>1){reject('対応する既存曲が複数あります');continue;}
@@ -123,7 +137,7 @@ export function mergeCatalogImport(previous:Catalog|null,data:CatalogImport,orig
   }
  }
  const result=recount({...catalog,seriesNames:{...catalog.seriesNames,[-2]:'シリーズ不明'},songs:[...songs.values()],charts:[...charts.values()],importedData:{...origin,importedAt:now}});
- return {catalog:applySavedSupplement(result),updatedSongs,addedSongs,updatedCharts,addedCharts,acceptedCharts,issues,examples};
+ return {catalog:applySavedSupplement(reconcileSongIdentities(result)),updatedSongs,addedSongs,updatedCharts,addedCharts,acceptedCharts,issues,examples};
 }
 
 // A later public DB refresh supplies series/availability/community ratings, while
@@ -131,22 +145,13 @@ export function mergeCatalogImport(previous:Catalog|null,data:CatalogImport,orig
 // when a previously new imported song becomes available in the public catalog.
 export function preserveImportedCatalog(previous:Catalog|null,incoming:Catalog):Catalog{
  if(!previous?.importedData)return incoming;
- const lookup=indexSongs(incoming.songs),songs=new Map(incoming.songs.map(s=>[s.id,s])),renamed=new Map<string,string>();
- const oldCharts=new Map(previous.charts.map(c=>[c.id,c]));
- for(const old of previous.songs){
-  if(!old.importedInfo)continue;
-  let current=songs.get(old.id);
-  if(!current&&old.id.startsWith('arcade-')){
-   const matches=lookup.keys.get(songKey(old))??[];
-   if(matches.length===1&&!renamed.has(matches[0].id)){current=matches[0];songs.delete(current.id);renamed.set(current.id,old.id);current={...current,id:old.id};}
-  }
-  if(current)songs.set(old.id,withSongInfo({...current,availabilityUnknown:false},old.importedInfo));
- }
- const charts=incoming.charts.map(c=>{
-  const songId=renamed.get(c.songId);const chart=songId?{...c,songId,id:`${songId}:${c.mode}:${c.difficulty}`}:c;
-  const info=oldCharts.get(chart.id)?.importedInfo;return info?withChartInfo(chart,info):chart;
- });
- return recount({...incoming,songs:[...songs.values()],charts,seriesNames:{...incoming.seriesNames,[-2]:'シリーズ不明'},importedData:previous.importedData});
+ const importedIds=new Set(previous.songs.filter(s=>s.importedInfo).map(s=>s.id));
+ return recount(reconcileSongIdentities({...incoming,
+  songs:[...incoming.songs,...previous.songs.filter(s=>s.importedInfo)],
+  charts:[...incoming.charts,...previous.charts.filter(c=>importedIds.has(c.songId))],
+  songIdentities:{links:{...previous.songIdentities?.links,...incoming.songIdentities?.links},redirects:{...previous.songIdentities?.redirects,...incoming.songIdentities?.redirects}},
+  importedData:previous.importedData,
+ }));
 }
 
 export function normalizeCatalogImportUrl(input:string){
@@ -225,3 +230,5 @@ export async function fetchCatalogImportText(input:string,signal:AbortSignal,onP
  catch(error){await reader.cancel().catch(()=>{});throw error;}finally{reader.releaseLock();}
  return {text:parts.join(''),url};
 }
+
+export function reconcileStoredCatalog(catalog:Catalog):Catalog{return applySavedSupplement(reconcileSongIdentities(stripSupplement(catalog)!));}

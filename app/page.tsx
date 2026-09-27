@@ -1,4 +1,5 @@
 "use client";
+import {songNames,resolveChartId} from '@/lib/song-identity';
 import {useCallback,useEffect,useMemo,useRef,useState,type CSSProperties,type SetStateAction} from 'react';
 import {ArrowDown,ArrowLeftRight,ArrowUp,Check,ChevronRight,Folder,FolderHeart,Info,ListMusic,Loader2,NotebookPen,RotateCcw,Save,Search,Settings2,ShieldCheck,SlidersHorizontal,Smartphone,Star,Activity,X} from 'lucide-react';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
@@ -20,7 +21,7 @@ import {fetchCatalog,mergeCatalog,migrateLegacyState,canonicalChartId,canonicalS
 import {CatalogTitleSource} from '@/components/catalog-title-debug';
 import {CatalogSettings} from '@/components/catalog-settings';
 import {CatalogImportSettings,ImportedChartDetails} from '@/components/catalog-import';
-import {mergeCatalogImport,type CatalogImport,type ImportOrigin} from '@/lib/catalog-import';
+import {mergeCatalogImport,reconcileStoredCatalog,type CatalogImport,type ImportOrigin} from '@/lib/catalog-import';
 import {useOfflineApp} from '@/lib/use-offline-app';
 import {OfflineSettings,OfflineStatus} from '@/components/offline-settings';
 import {restoreBackupData,type Backup} from '@/lib/iidx-backup';
@@ -89,7 +90,7 @@ export default function Home(){
  const songs=catalog?.songs??sampleSongs,rawCharts=catalog?.charts??sampleCharts,seriesNames=catalog?.seriesNames??sampleSeriesNames;
  const songById=useMemo(()=>Object.fromEntries(songs.map(s=>[s.id,s])),[songs]);
  const charts=useMemo(()=>rawCharts.map(chart=>applyManualChart(chart,app.manualCharts,songById[chart.songId]?.bpm)),[rawCharts,app.manualCharts,songById]);
- const searchBySong=useMemo(()=>Object.fromEntries(songs.map(s=>[s.id,{title:normalized(s.title),artist:normalized(s.artist)}])),[songs]);
+ const searchBySong=useMemo(()=>Object.fromEntries(songs.map(s=>[s.id,{title:songNames(s).map(name=>normalized(name.title)),artist:songNames(s).map(name=>normalized(name.artist))}])),[songs]);
  const artists=useMemo(()=>Array.from(new Set(songs.map(s=>s.artist))).sort((a,b)=>a.localeCompare(b,'ja')),[songs]);
  const [ready,setReady]=useState(false);const [storageError,setStorageError]=useState('');const [persistence,setPersistence]=useState('確認中');
  const {view,updateView,restoreView,ready:viewReady,error:viewError}=useLibraryView();
@@ -121,7 +122,8 @@ export default function Home(){
  const rankItems=useMemo(()=>Array.from(new Map(charts.filter(c=>c.mode===mode&&inDifficultyTable(c,table)).map(c=>chartRank(c,table,gauge,cpiGauge)).filter((r):r is NonNullable<typeof r>=>!!r).map(r=>[String(r.value),r.label]))).sort((a,b)=>compareNullable(ratingSortValue(Number(a[0]),table),ratingSortValue(Number(b[0]),table),1)).map(([value,label])=>({value,label})),[charts,mode,table,gauge,cpiGauge]);
  const busy=saving||transitioning||catalogImportReading;
  useEffect(()=>{
-  let active=true;readLibrary().then(({state:s,catalog:stored})=>{
+  let active=true;readLibrary().then(async({state:s,catalog:stored})=>{
+   if(stored){const merged=reconcileStoredCatalog({...stored,songIdentities:{links:{...s.songIdentities?.links,...stored.songIdentities?.links},redirects:{...s.songIdentities?.redirects,...stored.songIdentities?.redirects}}});const migrated=migrateLegacyState(s,merged);if(JSON.stringify(merged)!==JSON.stringify(stored)||JSON.stringify(migrated.state)!==JSON.stringify(s))await writeState(migrated.state,merged);stored=merged;s=migrated.state;if(active&&migrated.conflicts)toast.info(`統合先と異なる設定・スコア${migrated.conflicts}件は旧IDのままバックアップ内に保持しました。`);}
    if(!active)return;appRef.current=s;catalogRef.current=stored;setApp(s);setCatalog(stored);setFolderNames(s.folders.map(f=>f.name));
    const available=stored?.charts??sampleCharts,id=stored?canonicalSongId('mei'):'mei';
    const c=available.find(c=>c.songId===id&&c.mode===s.preferences.mode&&c.difficulty==='ANOTHER')??available.find(c=>c.mode===s.preferences.mode)!;
@@ -173,7 +175,7 @@ export default function Home(){
    const merged=mergeCatalog(catalogRef.current,incoming,appRef.current);let conflicts=0;
    setCatalogStage('保存中…');
    const next=await commit(s=>{const migrated=migrateLegacyState(s,merged.catalog);conflicts=migrated.conflicts;return migrated.state;},merged.catalog);
-   const id=canonicalChartId(selected.id),target=merged.catalog.charts.find(c=>c.id===id)??merged.catalog.charts.find(c=>c.mode===next.preferences.mode)!;
+   const id=resolveChartId(canonicalChartId(selected.id),merged.catalog.songIdentities?.redirects),target=merged.catalog.charts.find(c=>c.id===id)??merged.catalog.charts.find(c=>c.mode===next.preferences.mode)!;
    loadChart(target,next.preferences.spSide);setFolderNames(next.folders.map(f=>f.name));
    const message=`${merged.catalog.songs.length.toLocaleString()}曲・${merged.catalog.charts.length.toLocaleString()}譜面を端末に保存しました。`;
    setCatalogNotice(message);toast.success(message);
@@ -190,12 +192,13 @@ export default function Home(){
   transitionLock.current=true;setTransitioning(true);
   try{
    const merged=mergeCatalogImport(catalogRef.current,data,origin);
-   if(!merged.acceptedCharts)throw new Error('取り込める曲がありません。照合保留の内容を確認してください。');
+   if(!merged.acceptedCharts&&!merged.linkedSongs)throw new Error('取り込める曲がありません。照合保留の内容を確認してください。');
    const incoming=catalogRef.current?merged.catalog:mergeCatalog(null,merged.catalog,appRef.current).catalog;
-   const target=incoming.charts.find(c=>c.id===canonicalChartId(selected.id))??incoming.charts.find(c=>c.mode===appRef.current.preferences.mode)??incoming.charts[0];
-   const next=await commit(state=>{const migrated=migrateLegacyState(state,incoming).state;return {...migrated,preferences:{...migrated.preferences,mode:target.mode}};},incoming);
+   const target=incoming.charts.find(c=>c.id===resolveChartId(canonicalChartId(selected.id),incoming.songIdentities?.redirects))??incoming.charts.find(c=>c.mode===appRef.current.preferences.mode)??incoming.charts[0];
+   let conflicts=0;const next=await commit(state=>{const result=migrateLegacyState(state,incoming);conflicts=result.conflicts;const migrated=result.state;return {...migrated,preferences:{...migrated.preferences,mode:target.mode}};},incoming);
+   if(conflicts)toast.info(`統合先と異なる設定・スコア${conflicts}件は旧IDのままバックアップ内に保持しました。`);
    loadChart(target,next.preferences.spSide);setFolderNames(next.folders.map(f=>f.name));setCatalogError('');
-   const message=`楽曲JSONを取り込みました（${merged.updatedSongs+merged.addedSongs}曲・${merged.acceptedCharts}譜面）。`;
+   const message=merged.linkedSongs?`曲ID対応表を取り込みました（${merged.linkedSongs}組）。`:`楽曲JSONを取り込みました（${merged.updatedSongs+merged.addedSongs}曲・${merged.acceptedCharts}譜面）。`;
    setCatalogNotice(message);toast.success(message);
   }catch(error){throw new Error(error instanceof Error?`${error.message} 取り込みが完了するまで保存済みDBは変更しません。`:'保存できませんでした。端末の空き容量を確認してください。');}
   finally{transitionLock.current=false;setTransitioning(false);}
@@ -208,9 +211,11 @@ export default function Home(){
   if(saveLock.current||transitionLock.current)throw new Error('保存処理が終わってから、もう一度お試しください。');
   transitionLock.current=true;setTransitioning(true);
   try{
-   if(catalogRef.current)next=migrateLegacyState(next,catalogRef.current).state;
-   await restoreBackupData({...backup,data:next},view,s=>commit(()=>s),restoreView);
-   const target=charts.find(c=>c.songId===selected.songId&&c.mode===next.preferences.mode&&c.difficulty===selected.difficulty)??charts.find(c=>c.mode===next.preferences.mode)!;
+   const current=catalogRef.current;const restored=current?reconcileStoredCatalog({...current,songIdentities:{links:{...next.songIdentities?.links,...current.songIdentities?.links},redirects:{...next.songIdentities?.redirects,...current.songIdentities?.redirects}}}):undefined;
+   if(restored)next=migrateLegacyState(next,restored).state;
+   await restoreBackupData({...backup,data:next},view,s=>commit(()=>s,restored),restoreView);
+   const restoredCharts=restored?.charts??charts;
+   const target=restoredCharts.find(c=>c.songId===selected.songId&&c.mode===next.preferences.mode&&c.difficulty===selected.difficulty)??restoredCharts.find(c=>c.mode===next.preferences.mode)!;
    loadChart(target,next.preferences.spSide);setFolderNames(next.folders.map(f=>f.name));setEditorOpen(false);
   }catch(error){throw new Error(error instanceof Error&&error.message.startsWith('保存に失敗し、')?error.message:'端末に保存できませんでした。復元は完了していません。もう一度お試しください。');}
   finally{transitionLock.current=false;setTransitioning(false);}
@@ -228,7 +233,7 @@ export default function Home(){
   if(radarError)return [];
   const direction=sortDirection==='asc'?1:-1;
   const axis=radarAxes.findIndex(item=>item.key===sort);
-  return charts.filter(c=>{const s=songById[c.songId],search=searchBySong[c.songId];return matchesPlayFilter(playRecords[c.id],playStatus)&&c.mode===mode&&inDifficultyTable(c,table)&&(rank==='all'||String(chartRank(c,table,gauge,cpiGauge)?.value??'missing')===rank)&&matchesRadar(c,radarRanges)&&(difficulty==='all'||c.difficulty===difficulty)&&(!q||search.title.includes(q))&&(filters.series==='all'||s.series===Number(filters.series))&&(!artistQuery||search.artist.includes(artistQuery))&&matchesChartFeatures(c,filters.features)&&matchesDifficultyLevels(c.level,filters.levels)&&(filters.availability==='all'||(filters.availability==='removed'?chartAvailability(c,s)==='not_included':chartAvailability(c,s)==='included'))&&(!filters.soflan||(c.soflan??s.soflan))&&(!folderSongIds||folderSongIds.has(s.id))&&(!savedOnly||!!app.notes[noteKey(c,spSide)]);}).sort((a,b)=>{
+  return charts.filter(c=>{const s=songById[c.songId],search=searchBySong[c.songId];return matchesPlayFilter(playRecords[c.id],playStatus)&&c.mode===mode&&inDifficultyTable(c,table)&&(rank==='all'||String(chartRank(c,table,gauge,cpiGauge)?.value??'missing')===rank)&&matchesRadar(c,radarRanges)&&(difficulty==='all'||c.difficulty===difficulty)&&(!q||search.title.some(title=>title.includes(q)))&&(filters.series==='all'||s.series===Number(filters.series))&&(!artistQuery||search.artist.some(artist=>artist.includes(artistQuery)))&&matchesChartFeatures(c,filters.features)&&matchesDifficultyLevels(c.level,filters.levels)&&(filters.availability==='all'||(filters.availability==='removed'?chartAvailability(c,s)==='not_included':chartAvailability(c,s)==='included'))&&(!filters.soflan||(c.soflan??s.soflan))&&(!folderSongIds||folderSongIds.has(s.id))&&(!savedOnly||!!app.notes[noteKey(c,spSide)]);}).sort((a,b)=>{
    const first=songById[a.songId],second=songById[b.songId];
    const titleOrder=first.title.localeCompare(second.title,'ja');
    const seriesOrder=first.series<0?(second.series<0?0:1):second.series<0?-1:(first.series-second.series)*(sort==='catalog'?direction:1);

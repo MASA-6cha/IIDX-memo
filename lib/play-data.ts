@@ -1,6 +1,7 @@
+import {songNames} from './song-identity';
 import {z} from 'zod';
 import {difficulties,type AppState,type Chart,type Difficulty,type Mode,type Song} from './iidx-data';
-import {officialPlayTitleAliases,playTitleKey,playTitleFormatKey,playTitleLatinKey} from './play-title';
+import {playTitleKey,playTitleFormatKey,playTitleLatinKey} from './play-title';
 import {lamps,playCsvHeaders} from './play-format';
 export {lamps,playCsvHeaders} from './play-format';
 
@@ -119,7 +120,7 @@ export function matchPlayImport(data:PlayImport,songs:Song[],charts:Chart[],choi
   const index=new Map<string,Chart[]>();
   for(const chart of charts){
    const song=songMap.get(chart.songId);if(!song)continue;
-   const titles=[song.title,...(officialPlayTitleAliases[song.id]??[])];
+   const titles=songNames(song).map(name=>name.title);
    for(const title of new Set(titles.map(keyOf))){const key=`${chart.mode}:${chart.difficulty}:${title}`;index.set(key,[...(index.get(key)??[]),chart]);}
   }
   return {keyOf,index};
@@ -127,7 +128,7 @@ export function matchPlayImport(data:PlayImport,songs:Song[],charts:Chart[],choi
  const matches:PlayMatch[]=data.entries.map((entry,index)=>{
   let candidates:Chart[]=[];
   for(const lookup of lookups){candidates=lookup.index.get(`${entry.mode}:${entry.difficulty}:${lookup.keyOf(entry.title)}`)??[];if(candidates.length)break;}
-  if(candidates.length>1&&entry.artist){const exact=candidates.filter(c=>playTitleKey(songMap.get(c.songId)!.artist)===playTitleKey(entry.artist!));if(exact.length)candidates=exact;}
+  if(candidates.length>1&&entry.artist){const exact=candidates.filter(c=>songNames(songMap.get(c.songId)!).some(name=>playTitleKey(name.artist)===playTitleKey(entry.artist!)));if(exact.length)candidates=exact;}
   // These imports come from the arcade score list. Prefer its current catalog
   // entry over archived/CS revisions, but retain every candidate for review.
   const current=candidates.filter(c=>songMap.get(c.songId)!.removed===false&&!songMap.get(c.songId)!.retained&&!c.retained);
