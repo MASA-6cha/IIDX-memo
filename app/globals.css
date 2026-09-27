@@ -143,4 +143,9 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .radar-number-value{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .radar-star-slot{display:block;width:1em;text-align:left}
 .radar-star-slot .radar-max-star{margin-left:0;vertical-align:baseline}
-.radar-values-compact .radar-metric{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:1px}
+/* Keep each compact label/value pair on one line; narrow rows use two columns. */
+.radar-values-compact{grid-template-columns:repeat(auto-fit,minmax(min(100%,max(108px,calc((100% - 12px)/3))),1fr));column-gap:6px;row-gap:4px}
+.radar-values-compact .radar-metric{display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:baseline;gap:3px}
+.radar-values-compact .radar-metric>span{white-space:nowrap}
+.radar-values-compact .radar-metric>strong.radar-number{grid-template-columns:6ch 9px;gap:1px;align-self:auto}
+.radar-values-compact .radar-star-slot{width:9px}
