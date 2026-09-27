@@ -50,3 +50,10 @@ test('Each selected feature must be true; false or unknown never qualifies and d
  assert(!matchesChartFeatures(chart,['MSS']));assert(!matchesChartFeatures({},['CN']));assert(matchesChartFeatures({},[]));
  for(const key of ['CN','HCN','BSS','MSS'])assert(matchesChartFeatures({importedInfo:{features:{[key]:true}}},[key]));
 });
+
+test('Source diagnostics default to hidden and persist when enabled',()=>{
+ const initial=initialLibraryView();assert.equal(initial.showTitleSource,false);
+ assert.equal(parseLibraryView(serializeLibraryView({...initial,showTitleSource:true})).showTitleSource,true);
+ const legacy=JSON.parse(serializeLibraryView(initial));delete legacy.showTitleSource;
+ assert.equal(parseLibraryView(JSON.stringify(legacy)).showTitleSource,false);
+});
