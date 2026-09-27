@@ -44,7 +44,7 @@ import {chartCommonNumbers,effectiveNumberNote,applyNumberAction} from '@/lib/co
 import {SettingsSection} from '@/components/settings-section';
 import {MyActivity} from '@/components/my-activity';
 import {hasPlaySummary,playDisplayFields} from '@/lib/play-display';
-import {chartPlayHistory,resolvePlayRecords,storedPlayVersions,scoreSourceLabel,type ScoreSource} from '@/lib/play-history';
+import {resolveSongPlayRecord,chartPlayHistory,resolvePlayRecords,storedPlayVersions,scoreSourceLabel,type ScoreSource} from '@/lib/play-history';
 import {collectPlayHistory,applyPlayImport,matchesPlayFilter,lamps,lampLabels} from '@/lib/play-data';
 import {AppearanceSettings} from '@/components/appearance-settings';
 import {copySeriesAppearance,seriesTitleStyle} from '@/lib/appearance';
@@ -284,7 +284,7 @@ export default function Home(){
    <div><Choice label="編集中の譜面難易度" value={selected.id} onChange={changeEditorChart} disabled={!ready||busy||!!storageError} items={charts.filter(c=>c.songId===selected.songId&&c.mode===mode).map(c=>({value:c.id,label:`${c.difficulty} ☆${c.level||'?'}`}))}/></div>
   </div>
   <div className="editor-scroll">
-   {showPlayData&&<><PlayScoreDetails score={playRecords[selected.id]} chart={selected} display={playDisplay} sourceLabel={selectedScoreSource}/><PlayScoreHistory scores={chartPlayHistory(playHistory,selected.id)} seriesNames={seriesNames}/></>}
+   {showPlayData&&<><PlayScoreDetails score={playRecords[selected.id]} chart={selected} display={playDisplay} sourceLabel={selectedScoreSource} songRecord={resolveSongPlayRecord(app.playData?.songRecords?.[`${selected.songId}:${selected.mode}`],scoreSource,playHistory)}/><PlayScoreHistory scores={chartPlayHistory(playHistory,selected.id)} seriesNames={seriesNames} songRecords={app.playData?.songRecords?.[`${selected.songId}:${selected.mode}`]}/></>}
    <ManualPlayEditor key={selected.id} chart={selected} title={activeSong.title} history={playHistory} seriesNames={seriesNames} source={scoreSource} disabled={!ready||busy||!!storageError} onSave={async input=>{await commit(s=>applyManualPlay(s,selected,input));toast.success('手入力のプレイデータを保存しました。');}}/>
    <ManualChartEditor key={`chart-${selected.id}`} chart={selected} title={activeSong.title} displayBpm={selected.bpm??activeSong.bpm} disabled={!ready||busy||!!storageError} onSave={async data=>{await commit(s=>{const manualCharts={...s.manualCharts},id=canonicalChartId(selected.id);delete manualCharts[selected.id];if(data.bpm===undefined&&data.noteCount===undefined&&!data.radarValues)delete manualCharts[id];else manualCharts[id]=data;return {...s,manualCharts};});toast.success('手入力の譜面データを保存しました。');}}/>
    <ImportedChartDetails song={activeSong} chart={selected}/>
