@@ -1,3 +1,4 @@
+import type {SongIdentities} from './song-identity';
 import type {CatalogImport,ImportOrigin} from './catalog-import';
 import {type PlayData} from './play-data';
 export type Mode='SP'|'DP';
@@ -9,7 +10,7 @@ export interface TitleSource{kind:"public"|"supplement";label:string;url?:string
 export interface ImportedSongInfo{origin?:ImportOrigin;musicId:number;title:string;artist:string;genre?:string|null;importedAt:string}
 export type ArcadeAvailability='included'|'not_included'|'unknown';
 export interface ImportedChartInfo{level:number|null;bpm?:string;soflan?:boolean;noteCount?:number|null;radarValues?:RadarValues|null;features?:Partial<Record<'CN'|'HCN'|'BSS'|'MSS',boolean|null>>;status?:string|null;statusLabel?:string|null;arcadeAvailability?:{status:ArcadeAvailability;referenceVersion:number};warnings?:string[];importedAt:string}
-export interface Song{titleSource?:TitleSource;supplementBase?:Song|null;id:string;series:number;title:string;artist:string;bpm:string;soflan:boolean;removed:boolean;retained?:boolean;availabilityUnknown?:boolean;genre?:string|null;importedInfo?:ImportedSongInfo}
+export interface Song{publicId?:string;nameAliases?:{title:string;artist:string}[];titleSource?:TitleSource;supplementBase?:Song|null;id:string;series:number;title:string;artist:string;bpm:string;soflan:boolean;removed:boolean;retained?:boolean;availabilityUnknown?:boolean;genre?:string|null;importedInfo?:ImportedSongInfo}
 export type RadarValues=[number|null,number|null,number|null,number|null,number|null,number|null];
 export interface DifficultyRating{value:number;label:string}
 export interface GaugeRatings{normal:DifficultyRating|null;hard:DifficultyRating|null}
@@ -17,7 +18,7 @@ export type CpiGauge='easy'|'normal'|'hard'|'exh'|'fc';
 export type CpiRatings=Record<CpiGauge,{value:number|null;individual:number|null}>;
 export interface ManualChartData{bpm?:string;noteCount?:number;radarValues?:RadarValues;updatedAt:string}
 export interface Chart{supplementBase?:Chart|null;manualData?:ManualChartData;manualApplied?:string[];id:string;songId:string;mode:Mode;difficulty:Difficulty;level:number;unofficialRatings:Record<string,string|number>;bpm?:string;soflan?:boolean;noteCount?:number|null;retained?:boolean;radar?:{values:RadarValues;notes:number}|null;importedInfo?:ImportedChartInfo;community?:{sp11?:GaugeRatings;sp12?:GaugeRatings;dp?:DifficultyRating;cpi?:CpiRatings}}
-export interface Catalog{supplementData?:{data:CatalogImport;origin:ImportOrigin;importedAt:string};schemaVersion:1;source:'iidx-data-table'|'iidx-info-exporter';fetchedAt:string;sourceUpdatedAt:string|null;seriesNames:Record<number,string>;songs:Song[];charts:Chart[];importedData?:{importedAt:string;label:string;url?:string};additionalData?:{radarCharts:number;sp11Charts:number;sp12Charts:number;dpCharts:number;cpiCharts?:number}}
+export interface Catalog{songIdentities?:SongIdentities;identityIssues?:string[];supplementData?:{data:CatalogImport;origin:ImportOrigin;importedAt:string};schemaVersion:1;source:'iidx-data-table'|'iidx-info-exporter';fetchedAt:string;sourceUpdatedAt:string|null;seriesNames:Record<number,string>;songs:Song[];charts:Chart[];importedData?:{importedAt:string;label:string;url?:string};additionalData?:{radarCharts:number;sp11Charts:number;sp12Charts:number;dpCharts:number;cpiCharts?:number}}
 export const seriesCode=(series:number)=>series===1.5?'sub':series===-2?'?':series<0?'CS':String(series).padStart(2,'0');
 // UI fixtures. Levels, chart availability and removal status are explicitly provisional.
 const fixtures:[string,number,string,string,string,boolean,boolean,number[],number[]][]=[
@@ -56,7 +57,7 @@ export const hasLegacyDisplayConflict=(n:Note)=>!n.display&&JSON.stringify(displ
 export interface Folder{id:string;name:string;color:string;songIds:string[]}
 export type NumberSettings=Pick<DisplaySettings,'green'|'whiteTop'|'whiteBottom'>;
 export type NumberProfile='SP:1P'|'SP:2P'|'DP';
-export interface AppState{liftVisibility?:{SP:boolean;DP:boolean};commonNumbers?:Partial<Record<NumberProfile,NumberSettings>>;schemaVersion:1;preferences:{mode:Mode;spSide:Side};notes:Record<string,Note>;folders:Folder[];playData?:PlayData;manualCharts?:Record<string,ManualChartData>}
+export interface AppState{songIdentities?:SongIdentities;liftVisibility?:{SP:boolean;DP:boolean};commonNumbers?:Partial<Record<NumberProfile,NumberSettings>>;schemaVersion:1;preferences:{mode:Mode;spSide:Side};notes:Record<string,Note>;folders:Folder[];playData?:PlayData;manualCharts?:Record<string,ManualChartData>}
 export const blankSide=():SideSettings=>({style:'NORMAL',cover:'SUDDEN+',whiteTop:'',whiteBottom:'',green:'',comment:'',autoScratch:false,legacyNote:false});
 export const blankNote=():Note=>({left:blankSide(),right:blankSide(),flip:false,link:'OFF'});
 export const initialState=():AppState=>({schemaVersion:1,preferences:{mode:'SP',spSide:'1P'},notes:{},folders:[{id:'fav1',name:'お気に入り',color:'#efd170',songIds:[]},{id:'fav2',name:'練習中',color:'#77ecd3',songIds:[]},{id:'fav3',name:'ソフラン対策',color:'#f59a67',songIds:[]},{id:'fav4',name:'次にプレイ',color:'#aab1ff',songIds:[]},{id:'fav5',name:'保留',color:'#ed9bc9',songIds:[]}]});

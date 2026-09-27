@@ -1,3 +1,4 @@
+import {identityStateSchema} from './song-identity';
 import {z} from 'zod';
 import {libraryViewSchema,type LibraryView} from './iidx-view';
 import {commonNumbersSchema} from './common-numbers';
@@ -21,7 +22,7 @@ const noteSchema=z.object({
 // IDs may belong to a later catalog. Retain them without requiring the current sample DB.
 const noteId=/^[^:\s]{1,160}:(?:SP:(?:BEGINNER|NORMAL|HYPER|ANOTHER|LEGGENDARIA):(?:1P|2P)|DP:(?:BEGINNER|NORMAL|HYPER|ANOTHER|LEGGENDARIA))$/;
 const stateSchema=z.object({
- schemaVersion:z.literal(1),
+ schemaVersion:z.literal(1),songIdentities:identityStateSchema.optional(),
  preferences:z.object({mode:z.enum(['SP','DP']),spSide:z.enum(['1P','2P'])}).strict(),
  notes:z.record(z.string().regex(noteId),noteSchema),
  liftVisibility:z.object({SP:z.boolean(),DP:z.boolean()}).strict().optional(),commonNumbers:commonNumbersSchema.optional(),playData:playDataSchema.optional(),manualCharts:manualChartsSchema.optional(),
