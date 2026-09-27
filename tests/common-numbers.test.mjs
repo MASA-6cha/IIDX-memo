@@ -1,3 +1,4 @@
+const {initialLibraryView}=await loadSource('../lib/iidx-view.ts');
 import assert from 'node:assert/strict';import test from 'node:test';import {loadSource} from './load-source.mjs';
 const {blankNote,initialState}=await loadSource('../lib/iidx-data.ts');
 const {applyNumberAction,chartCommonNumbers,effectiveNumberNote}=await loadSource('../lib/common-numbers.ts');
@@ -23,5 +24,5 @@ test('Bulk offsets adjust base and explicit numbers once, retain differences, an
 test('Any out-of-range offset is atomic; legacy DP conflicts are skipped; common values survive backup',()=>{
  const state=fixture();state.notes['plain:SP:ANOTHER:1P'].left.green='9999';const before=JSON.stringify(state);assert.throws(()=>applyNumberAction(state,charts,songs,{type:'shift',profile:'SP:1P',field:'green',delta:1}));assert.equal(JSON.stringify(state),before);
  delete state.notes['plain:DP:ANOTHER'].display;const result=applyNumberAction(state,charts,songs,{type:'shift',profile:'DP',field:'green',delta:1});assert.equal(result.excludedNotes,1);assert.equal(result.changedNotes,0);
- assert.deepEqual(parseBackup(makeBackup(state)).data.commonNumbers,state.commonNumbers);
+ assert.deepEqual(parseBackup(makeBackup(state,initialLibraryView())).data.commonNumbers,state.commonNumbers);
 });

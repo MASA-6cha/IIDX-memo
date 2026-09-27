@@ -1,3 +1,4 @@
+const {initialLibraryView}=await loadSource('../lib/iidx-view.ts');
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {loadSource} from './load-source.mjs';
@@ -23,7 +24,7 @@ test('Manual changes only affect the chosen fields and series, keep provenance, 
  assert.deepEqual(clearOnly.playData.history[chart.id]['33'].manual,{score:later,lamp:later});
  assert.deepEqual(clearOnly.playData.imports,original.playData.imports);
  assert(playDataSchema.safeParse(clearOnly.playData).success);
- assert.deepEqual(parseBackup(makeBackup(clearOnly)).data,clearOnly);
+ assert.deepEqual(parseBackup(makeBackup(clearOnly,initialLibraryView())).data,clearOnly);
  const imported=applyPlayImport(clearOnly,[{target:chart,entry:{mode:'SP',score:score(33,{exScore:1700})}}],later);
  assert.equal(imported.playData.history[chart.id]['33'].manual,undefined);
 });
@@ -49,7 +50,7 @@ test('Deleting a series removes every SP/DP/legacy record without resurrection o
  assert.equal(deleted.playData.records[chart.id].gameVersion,33);assert.equal(deleted.playData.imports.SP,undefined);
  assert.equal(history['unknown:SP:NORMAL'].unknown.gameVersion,null);
  assert.deepEqual(deleted.notes,original.notes);assert.deepEqual(deleted.folders,original.folders);assert.deepEqual(deleted.preferences,original.preferences);
- assert.deepEqual(parseBackup(makeBackup(deleted)).data,deleted);
+ assert.deepEqual(parseBackup(makeBackup(deleted,initialLibraryView())).data,deleted);
  const noKnown=deletePlaySeries(deleted,33),empty=deletePlaySeries(noKnown,null);assert.deepEqual(collectPlayHistory(empty.playData),{});assert.deepEqual(empty.playData.records,{});
  assert.deepEqual(playSeriesCounts(collectPlayHistory(original.playData)).map(x=>[x.key,x.SP,x.DP,x.manual]),[['33',1,0,0],['32',1,1,1],['unknown',1,0,0]]);
 });
