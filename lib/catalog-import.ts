@@ -109,7 +109,7 @@ export function mergeCatalogImport(previous:Catalog|null,data:CatalogImport,orig
   if(old?.importedInfo&&old.importedInfo.musicId!==input.musicId){reject('既存曲に別のmusic_idが登録されています');continue;}
   const id=old?.id??(!previous?sampleIds.get(songKey(input)):undefined)??`arcade-${input.musicId}`;
   if(claimed.has(id)||(!old&&songs.has(id))){reject('同じ曲への重複した対応を検出しました');continue;}claimed.add(id);
-  const info:ImportedSongInfo={...old?.importedInfo,musicId:input.musicId!,title:input.title,artist:input.artist,...(input.genre!==undefined?{genre:input.genre}:{}),importedAt:now};
+  const info:ImportedSongInfo={...old?.importedInfo,origin:{...origin},musicId:input.musicId!,title:input.title,artist:input.artist,...(input.genre!==undefined?{genre:input.genre}:{}),importedAt:now};
   const first=input.charts[0];
   const song=withSongInfo(old??{id,series:-2,title:input.title,artist:input.artist,bpm:first.bpm??'—',soflan:input.charts.some(c=>c.soflan),removed:false,availabilityUnknown:true},info);
   if(first.bpm!==undefined)song.bpm=first.bpm;
@@ -191,7 +191,7 @@ function mergeSupplement(previous:Catalog|null,data:CatalogImport,origin:ImportO
   const id=old?.id??input.supplementId;
   if(claimed.has(id)){reject('同じ曲への重複した対応を検出しました');continue;}claimed.add(id);
   const first=input.charts.find(chart=>knownBpm(chart.bpm));
-  const song:Song={...(old??{id,title:input.title,artist:input.artist,series:input.version??-2,bpm:first?.bpm??'—',soflan:input.charts.some(chart=>chart.soflan),removed:false}),supplementBase:old??null};
+  const song:Song={...(old??{id,titleSource:{kind:"supplement",...origin,sourceId:input.supplementId},title:input.title,artist:input.artist,series:input.version??-2,bpm:first?.bpm??'—',soflan:input.charts.some(chart=>chart.soflan),removed:false}),supplementBase:old??null};
   if(!knownBpm(song.bpm)&&first?.bpm){song.bpm=first.bpm;song.soflan=!!first.soflan;}
   if(!song.genre&&input.genre)song.genre=input.genre;
   songs.set(id,song);

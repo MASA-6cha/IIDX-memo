@@ -130,3 +130,16 @@ test('Missing, null, empty and whitespace titles are skipped before chart valida
  assert.throws(()=>parse({...value,songs:value.songs.slice(1)}),/取り込める譜面がありません/);
  delete value.songs[0].charts.SPN.level;assert.equal(parse(value).songs[0].charts.find(c=>c.mode==='SP'&&c.difficulty==='NORMAL').level,null);
 });
+
+test('Title source follows each song, not the last imported file, after public refresh',async()=>{
+ const {songTitleOrigin}=await loadSource('../lib/catalog-title-debug.ts');
+ const firstOrigin={label:'first.json',url:'https://example.test/first.json'};
+ const first=mergeCatalogImport(existing(),parse(input()),firstOrigin,at).catalog;
+ const other=input();other.songs[0].music_id=99001;other.songs[0].title='Other song';
+ const second=mergeCatalogImport(first,parse(other),{label:'second.json'},at).catalog;
+ assert.equal(songTitleOrigin(second.songs.find(s=>s.id==='idt-1971'),second).label,'first.json');
+ const refreshed=mergeCatalog(second,existing(),initialState()).catalog;
+ assert.equal(songTitleOrigin(refreshed.songs.find(s=>s.id==='idt-1971'),refreshed).url,firstOrigin.url);
+ const legacy=structuredClone(first);delete legacy.songs[0].importedInfo.origin;
+ assert.match(songTitleOrigin(legacy.songs[0],legacy).label,/未記録/);
+});

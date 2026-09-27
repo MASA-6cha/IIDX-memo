@@ -42,7 +42,7 @@ export function parseCatalog(payload:{titles:unknown;info:unknown;charts:unknown
    songCharts.push({id:`${songId}:${mode}:${difficulty}`,songId,mode,difficulty,level,...tempo,noteCount,unofficialRatings:{}});
   }
   const series=versionNumber(info.version);names[series]??=`シリーズ ${series}`;
-  songs.push({id:songId,series,title:t.data[rawId],artist:info.artist||'不明',bpm:songCharts[0]?.bpm??'—',soflan:songCharts.some(x=>x.soflan),removed:!data.in_ac});
+  songs.push({id:songId,titleSource:{kind:"public",label:"IIDX Data Table / TexTage",url:`${CATALOG_SOURCE_URL}textage/title.json`,sourceId:rawId},series,title:t.data[rawId],artist:info.artist||'不明',bpm:songCharts[0]?.bpm??'—',soflan:songCharts.some(x=>x.soflan),removed:!data.in_ac});
   charts.push(...songCharts);
  }
  if(!charts.some(c=>c.mode==='SP')||!charts.some(c=>c.mode==='DP'))throw new Error('譜面情報が不足しているため更新を中止しました。');
