@@ -55,9 +55,9 @@ test('Public refresh preserves imported values including null, yet refreshes com
  assert(refreshed.charts.every(c=>!c.retained));assert.equal(refreshed.importedData.label,'songs.json');
 });
 
-test('New songs stay unknown until a unique public match enriches them without changing saved IDs',()=>{
+test('Five-digit IDs fill missing series while availability stays unknown until a public match',()=>{
  const fresh=mergeCatalogImport(null,parse(input()),origin,at).catalog;
- assert.equal(fresh.songs[0].id,'arcade-19071');assert.equal(fresh.songs[0].series,-2);assert.equal(fresh.songs[0].availabilityUnknown,true);
+ assert.equal(fresh.songs[0].id,'arcade-19071');assert.equal(fresh.songs[0].series,19);assert.equal(fresh.seriesNames[19],'Lincle');assert.equal(fresh.songs[0].availabilityUnknown,true);
  assert.equal(calculateActivity(fresh.charts,fresh.songs,{},'SP','available').total,0);
  const state=initialState();state.notes['arcade-19071:SP:ANOTHER:1P']=blankNote();state.folders[0].songIds=['arcade-19071'];
  const refreshed=mergeCatalog(fresh,existing(),state).catalog;
