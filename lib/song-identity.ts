@@ -1,6 +1,6 @@
 import bundledIdentities from './song-identities.json';
 import {z} from 'zod';
-import type {Catalog,Chart,Song,ImportedChartInfo} from './iidx-data';
+import {seriesNames as builtInSeriesNames,type Catalog,type Chart,type Song,type ImportedChartInfo} from './iidx-data';
 import {officialPlayTitleAliases,playTitleFormatKey} from './play-title';
 
 export const identityStateSchema=z.object({
@@ -11,6 +11,13 @@ export type SongIdentities=z.infer<typeof identityStateSchema>;
 const bundledLinks:Record<string,string>=Object.fromEntries(bundledIdentities.links.map(row=>[String(row.music_id),row.song_key.replace('iidx-data-table:','idt-')]));
 export const identityPublicId=(musicId:number,catalog:Catalog)=>catalog.songIdentities?.links[String(musicId)]??bundledLinks[String(musicId)];
 export const publicSongId=(song:Song)=>song.publicId??(/^idt-\d+$/.test(song.id)?song.id:undefined);
+// The exporter encodes the debut series in the first two digits of a five-digit music_id.
+// Other ID formats have no guaranteed series encoding.
+export function seriesFromMusicId(musicId:number):number|null{
+ if(!Number.isInteger(musicId)||musicId<10000||musicId>99999)return null;
+ const series=Math.floor(musicId/1000);
+ return series>=1&&series<=99?series:null;
+}
 export function songNames(song:Song){
  const names=[{title:song.title,artist:song.artist},...(song.nameAliases??[]),...(officialPlayTitleAliases[publicSongId(song)??song.id]??[]).map(title=>({title,artist:song.artist}))];
  return [...new Map(names.map(name=>[JSON.stringify(name),name])).values()];
@@ -32,7 +39,8 @@ export function applyAnalyzedChart(chart:Chart,info:ImportedChartInfo):Chart{
 function combineSongs(group:Song[],id:string):Song{
  const publicSong=group.find(song=>publicSongId(song)),latest=group.filter(song=>song.importedInfo).sort((a,b)=>b.importedInfo!.importedAt.localeCompare(a.importedInfo!.importedAt))[0];
  const base=publicSong??group[0],info=latest?.importedInfo;
- const result:Song={...base,id,...(publicSong?{publicId:publicSongId(publicSong)}:{}),...(info?{title:info.title,artist:info.artist,importedInfo:info,bpm:latest!.bpm,soflan:latest!.soflan,...(info.genre!==undefined?{genre:info.genre}:{})}:{}),...(publicSong?{availabilityUnknown:false}:{})};
+ const inferred=info?seriesFromMusicId(info.musicId):null;
+ const result:Song={...base,id,...(base.series===-2&&inferred!==null?{series:inferred}:{}),...(publicSong?{publicId:publicSongId(publicSong)}:{}),...(info?{title:info.title,artist:info.artist,importedInfo:info,bpm:latest!.bpm,soflan:latest!.soflan,...(info.genre!==undefined?{genre:info.genre}:{})}:{}),...(publicSong?{availabilityUnknown:false}:{})};
  return rememberSongNames(result,...group);
 }
 // Titles help establish a unique correspondence once. Later refreshes use IDs.
@@ -83,5 +91,7 @@ export function reconcileSongIdentities(catalog:Catalog):Catalog{
   for(const c of group.filter(c=>c.importedInfo).sort((a,b)=>a.importedInfo!.importedAt.localeCompare(b.importedInfo!.importedAt)))chart=applyAnalyzedChart(chart,{...chart.importedInfo,...c.importedInfo!});
   return chart;
  });
- return {...catalog,songs:result,charts,songIdentities:{links:Object.fromEntries(Object.entries(links).filter(([music])=>musicIndex.has(Number(music))||Object.hasOwn(catalog.songIdentities?.links??{},music))),redirects},identityIssues:[...issues]};
+ const seriesNames={...catalog.seriesNames};
+ for(const song of result)if(song.series>0&&!seriesNames[song.series])seriesNames[song.series]=builtInSeriesNames[song.series]??`IIDX ${song.series}`;
+ return {...catalog,seriesNames,songs:result,charts,songIdentities:{links:Object.fromEntries(Object.entries(links).filter(([music])=>musicIndex.has(Number(music))||Object.hasOwn(catalog.songIdentities?.links??{},music))),redirects},identityIssues:[...issues]};
 }
