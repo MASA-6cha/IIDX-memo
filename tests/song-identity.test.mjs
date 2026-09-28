@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {loadSource} from './load-source.mjs';
-const {reconcileSongIdentities,songNames}=await loadSource('../lib/song-identity.ts');
+const {reconcileSongIdentities,songNames,seriesFromMusicId}=await loadSource('../lib/song-identity.ts');
 const {mergeCatalogImport,parseCatalogImport}=await loadSource('../lib/catalog-import.ts');
 const {mergeCatalog,migrateLegacyState}=await loadSource('../lib/iidx-catalog.ts');
 const {blankNote,initialState}=await loadSource('../lib/iidx-data.ts');
@@ -13,6 +13,20 @@ const chart=(id,extra={})=>({id:`${id}:SP:ANOTHER`,songId:id,mode:'SP',difficult
 const base=(songs=[song('idt-999001')],charts=songs.map(s=>chart(s.id,{community:{sp12:{normal:{value:2,label:'B'},hard:null}}})))=>({schemaVersion:1,source:'iidx-data-table',fetchedAt:at,sourceUpdatedAt:null,seriesNames:{33:'test'},songs,charts});
 const input=(music_id=900000001,title='ABC ~test~',artist='Artist')=>parseCatalogImport(JSON.stringify({schema:'iidx-info-exporter/songs/1',songs:[{music_id,title,artist,charts:{SPA:{level:11,note_count:1234,radar:{NOTES:0}}}}]}));
 const mapping=(music_id=900000001,publicId='999001')=>parseCatalogImport(JSON.stringify({schema:'iidx-song-identities/1',links:[{music_id,song_key:`iidx-data-table:${publicId}`}]}));
+
+test('Five-digit music IDs repair saved unknown series without changing established provider series',()=>{
+ assert.equal(seriesFromMusicId(19071),19);assert.equal(seriesFromMusicId(12058),12);
+ assert.equal(seriesFromMusicId(34001),34);assert.equal(seriesFromMusicId(1234),null);
+ assert.equal(seriesFromMusicId(900000001),null);
+ let catalog=mergeCatalogImport(null,input(34001,'New chart'),origin,at).catalog;
+ assert.equal(catalog.songs[0].series,34);assert.equal(catalog.seriesNames[34],'ZINRAI');
+ const legacy={...catalog,songs:catalog.songs.map(s=>({...s,series:-2})),seriesNames:{[-2]:'シリーズ不明'}};
+ catalog=reconcileSongIdentities(legacy);
+ assert.equal(catalog.songs[0].series,34);assert.equal(catalog.seriesNames[34],'ZINRAI');
+ const publicSong={...song('idt-1111','New chart'),series:1.5};
+ const merged=reconcileSongIdentities({...catalog,songs:[...catalog.songs,publicSong],songIdentities:{links:{34001:'idt-1111'},redirects:{}}});
+ assert.equal(merged.songs[0].series,1.5);
+});
 
 test('Analysis display wins, public and old analysis names remain aliases across public refreshes',()=>{
  let catalog=mergeCatalogImport(base(),input(),origin,at).catalog;
