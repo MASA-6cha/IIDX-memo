@@ -1,3 +1,4 @@
+import {defaultScoreGraphColors,scoreGraphColorsSchema,type ScoreGraphColors} from './score-graph';
 import {z} from 'zod';
 import {type OfficialFolderGrouping} from './difficulty-folders';
 import {type FolderSummaryMode} from './folder-summary';
@@ -14,12 +15,12 @@ export function chartAvailability(chart:Chart,song:Song):ArcadeAvailability{
  return chart.importedInfo?.arcadeAvailability?.status??(song.availabilityUnknown?'unknown':song.removed?'not_included':'included');
 }
 export type Filters={series:string;artist:string;levels:number[];availability:'all'|'available'|'removed';soflan:boolean;features:ChartFeature[]};
-export type LibraryView={theme:Theme;seriesTitleColors:boolean;seriesColors:SeriesColors;seriesOutlines:SeriesOutlines;query:string;filters:Filters;difficulty:string;folder:string;savedOnly:boolean;sort:string;sortDirection:'asc'|'desc';table:DifficultyTable;gauge:ClearGauge;cpiGauge:CpiGauge;officialFolderGrouping:OfficialFolderGrouping;difficultyFolderMode:boolean;difficultyFolder:string|null;folderSummary:FolderSummaryMode;rank:string;radarRanges:RadarRange[];playStatus:string;showPlayData:boolean;playDisplay:PlayDisplay;scoreSource:ScoreSource;showTitleSource:boolean;showRadar:boolean;showUnofficial:boolean;radarMode:boolean};
+export type LibraryView={theme:Theme;seriesTitleColors:boolean;seriesColors:SeriesColors;seriesOutlines:SeriesOutlines;query:string;filters:Filters;difficulty:string;folder:string;savedOnly:boolean;sort:string;sortDirection:'asc'|'desc';table:DifficultyTable;gauge:ClearGauge;cpiGauge:CpiGauge;officialFolderGrouping:OfficialFolderGrouping;difficultyFolderMode:boolean;difficultyFolder:string|null;folderSummary:FolderSummaryMode;rank:string;radarRanges:RadarRange[];playStatus:string;showPlayData:boolean;playDisplay:PlayDisplay;scoreSource:ScoreSource;showTitleSource:boolean;showRadar:boolean;showUnofficial:boolean;radarMode:boolean;scoreGraphMode:boolean;scoreGraphColors:ScoreGraphColors};
 export const defaultFilters=():Filters=>({series:'all',artist:'',levels:[],availability:'available',soflan:false,features:[]});
 export const toggleDifficultyLevel=(levels:number[],level:number)=>levels.includes(level)?levels.filter(value=>value!==level):[...levels,level].sort((a,b)=>a-b);
 export const matchesDifficultyLevels=(level:number,levels:number[])=>levels.length===0||levels.includes(level);
 export const libraryViewKey='iidx-option-notes:library-view:v1';
-export const initialLibraryView=():LibraryView=>({theme:'dark',seriesTitleColors:true,seriesColors:initialSeriesColors(),seriesOutlines:initialSeriesOutlines(),query:'',filters:defaultFilters(),difficulty:'ANOTHER',folder:'all',savedOnly:false,sort:'catalog',sortDirection:'asc',table:'official',gauge:'hard',cpiGauge:'hard',officialFolderGrouping:'level',difficultyFolderMode:true,difficultyFolder:null,folderSummary:'both',rank:'all',radarRanges:emptyRadarRanges(),playStatus:'all',showPlayData:true,playDisplay:initialPlayDisplay(),scoreSource:'latest',showTitleSource:false,showRadar:true,showUnofficial:true,radarMode:false});
+export const initialLibraryView=():LibraryView=>({theme:'dark',seriesTitleColors:true,seriesColors:initialSeriesColors(),seriesOutlines:initialSeriesOutlines(),query:'',filters:defaultFilters(),difficulty:'ANOTHER',folder:'all',savedOnly:false,sort:'catalog',sortDirection:'asc',table:'official',gauge:'hard',cpiGauge:'hard',officialFolderGrouping:'level',difficultyFolderMode:true,difficultyFolder:null,folderSummary:'both',rank:'all',radarRanges:emptyRadarRanges(),playStatus:'all',showPlayData:true,playDisplay:initialPlayDisplay(),scoreSource:'latest',showTitleSource:false,showRadar:true,showUnofficial:true,radarMode:false,scoreGraphMode:false,scoreGraphColors:defaultScoreGraphColors()});
 
 export const libraryViewSchema=z.object({
   theme:z.enum(['dark','light']).default('dark'),seriesTitleColors:z.boolean().default(true),seriesColors:seriesColorsSchema.default(initialSeriesColors),seriesOutlines:seriesOutlinesSchema.default(initialSeriesOutlines),
@@ -36,7 +37,7 @@ export const libraryViewSchema=z.object({
   officialFolderGrouping:z.enum(['level','series']).default('level'),folderSummary:z.enum(['none','dj','clear','both']).default('both'),difficultyFolderMode:z.boolean().default(true),difficultyFolder:z.string().regex(/^(infinity|excluded|missing|-?\d+(?:\.\d+)?|series:(?:missing|-?\d+(?:\.\d+)?))$/).max(80).nullable().default(null),
   radarRanges:z.array(z.object({min:z.string().max(30),max:z.string().max(30)})).length(6).default(emptyRadarRanges),
   playStatus:z.enum(['all','played','scored','missing','NO PLAY','FAILED','ASSIST CLEAR','EASY CLEAR','CLEAR','HARD CLEAR','EX HARD CLEAR','FULLCOMBO CLEAR']).default('all'),showPlayData:z.boolean().default(true),playDisplay:playDisplaySchema.default(initialPlayDisplay),scoreSource:z.union([z.enum(['latest','best','unknown']),z.string().regex(/^version:[1-9]\d{0,2}$/).transform(v=>v as ScoreSource)]).default('latest'),
-  showTitleSource:z.boolean().default(false),showRadar:z.boolean().default(true),showUnofficial:z.boolean().default(true),radarMode:z.boolean().default(false),
+  showTitleSource:z.boolean().default(false),showRadar:z.boolean().default(true),showUnofficial:z.boolean().default(true),radarMode:z.boolean().default(false),scoreGraphMode:z.boolean().default(false),scoreGraphColors:scoreGraphColorsSchema.default(defaultScoreGraphColors),
  }).transform(view=>({...view,sort:view.sort==='series'?'catalog':view.sort,sortDirection:view.sortDirection??(view.sort==='series'||view.sort==='level'?'desc':'asc')}));
 const storedViewSchema=z.object({version:z.literal(1),view:libraryViewSchema});
 
