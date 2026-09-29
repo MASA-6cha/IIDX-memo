@@ -25,6 +25,14 @@ test('Missing notes never invent a MAX; invalid and unrecorded zeros never becom
  assert.equal(unknown.maxExScore,null);assert.equal(unknown.ceiling,2100);assert.equal(unknown.current.rate.percent,null);
  assert.equal(buildScoreGraph(undefined,[],false,null).best,null);
 });
+test('Score bar rank and signed nearest boundary use the chart note count',()=>{
+ const scores={'30':score(30,1200),'31':score(31,1500),'32':score(32,1540),'33':score(33,1580),'34':score(34,1620),'35':score(35,2000)};
+ const rows=buildScoreGraph(scores,[30,31,32,33,34,35],false,1000).rows;
+ assert.deepEqual(rows.map(row=>[row.rank,row.nearest?.label,row.nearest?.difference]),[
+  ['B','B',88],['A','AA',-56],['A','AA',-16],['AA','AA',24],['AA','AA',64],['MAX','MAX',0]
+ ]);
+ assert.equal(buildScoreGraph(scores,[30],false,null).rows[0].nearest,null);
+});
 test('Graph colors and mode round-trip through local preferences and backups; old preferences get defaults',()=>{
  const view={...initialLibraryView(),scoreGraphMode:true,scoreGraphColors:{current:'#123456',past:'#abcdef'}};
  assert.deepEqual(parseLibraryView(serializeLibraryView(view)),view);

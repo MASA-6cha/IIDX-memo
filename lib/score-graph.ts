@@ -16,7 +16,11 @@ export function buildScoreGraph(scores:Record<string,PlayScore>|undefined,versio
   const hasScore=typeof ex==='number'&&Number.isSafeInteger(ex)&&ex>=0&&!(ex===0&&score?.djLevel===null);
   const invalid=hasScore&&maxExScore!==null&&ex!>maxExScore;
   const value=hasScore&&!invalid?ex!:null;
-  return {key,version:key==='unknown'?null:Number(key),score,value,invalid,current:currentVersion!==null&&key===String(currentVersion),rate:getScoreRate(score,noteCount)};
+  const rate=getScoreRate(score,noteCount);
+  const benchmarks=rate.benchmarks;
+  const rank=value!==null&&benchmarks.length?benchmarks.findLast(point=>point.difference>=0)?.label??null:null;
+  const nearest=value!==null&&benchmarks.length?benchmarks.reduce((best,point)=>Math.abs(point.difference)<Math.abs(best.difference)?point:best):null;
+  return {key,version:key==='unknown'?null:Number(key),score,value,invalid,current:currentVersion!==null&&key===String(currentVersion),rate,rank,nearest};
  });
  const values=rows.flatMap(r=>r.value===null?[]:[r.value]);
  const best=values.length?Math.max(...values):null;
