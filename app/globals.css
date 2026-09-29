@@ -173,3 +173,13 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .score-graph-value{text-shadow:0 1px 3px var(--background)}
 .score-graph-value b,.score-graph-benchmark b{font-weight:700}
 .score-graph-benchmark{position:absolute;bottom:calc(var(--score-height) - 23px);left:50%;transform:translateX(-50%);z-index:1;font-size:11px;white-space:nowrap;color:#f8fbff;text-shadow:0 1px 3px #101a29,0 0 3px #101a29;pointer-events:none}
+
+/* Options stay first; supplementary panels remember their expanded state. */
+.editor-additional{margin-top:16px;border-top:1px solid var(--border)}
+.editor-section{border-bottom:1px solid var(--border)}
+.editor-section [data-slot=accordion-trigger]{align-items:center;min-height:48px;padding:12px 0;font-size:14px;color:var(--muted-foreground);text-decoration:none}
+.editor-section [data-slot=accordion-trigger][data-state=open]{color:var(--foreground)}
+.editor-section [data-slot=accordion-content][data-state=closed]{display:none}
+.editor-section [data-slot=accordion-content]>div{padding-bottom:12px}
+.editor-section .editor-play,.editor-section .editor-radar{margin-bottom:10px}
+.editor-section .score-graph{margin:8px 0 16px}

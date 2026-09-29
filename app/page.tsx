@@ -43,6 +43,7 @@ import {applyManualChart} from '@/lib/manual-chart';
 import {CommonNumberSettings} from '@/components/common-number-settings';
 import {chartCommonNumbers,effectiveNumberNote,applyNumberAction} from '@/lib/common-numbers';
 import {SettingsSection} from '@/components/settings-section';
+import {EditorSection} from '@/components/editor-section';
 import {MyActivity} from '@/components/my-activity';
 import {hasPlaySummary,playDisplayFields} from '@/lib/play-display';
 import {resolveSongPlayRecord,chartPlayHistory,resolvePlayRecords,storedPlayVersions,scoreSourceLabel,type ScoreSource} from '@/lib/play-history';
@@ -95,7 +96,7 @@ export default function Home(){
  const artists=useMemo(()=>Array.from(new Set(songs.map(s=>s.artist))).sort((a,b)=>a.localeCompare(b,'ja')),[songs]);
  const [ready,setReady]=useState(false);const [storageError,setStorageError]=useState('');const [persistence,setPersistence]=useState('確認中');
  const {view,updateView,restoreView,ready:viewReady,error:viewError}=useLibraryView();
- const {theme,seriesTitleColors,seriesColors,seriesOutlines,query,filters,difficulty,folder,savedOnly,sort,sortDirection,table:requestedTable,gauge,cpiGauge,difficultyFolderMode,difficultyFolder,folderSummary,officialFolderGrouping,rank,radarRanges,showRadar,showUnofficial,radarMode,playStatus,showPlayData,playDisplay,scoreSource,scoreGraphMode,scoreGraphColors}=view;
+ const {theme,seriesTitleColors,seriesColors,seriesOutlines,query,filters,difficulty,folder,savedOnly,sort,sortDirection,table:requestedTable,gauge,cpiGauge,difficultyFolderMode,difficultyFolder,folderSummary,officialFolderGrouping,rank,radarRanges,showRadar,showUnofficial,radarMode,playStatus,showPlayData,playDisplay,scoreSource,scoreGraphMode,scoreGraphColors,editorSections}=view;
  const playHistory=useMemo(()=>collectPlayHistory(app.playData),[app.playData]);
  const playRecords=useMemo(()=>resolvePlayRecords(playHistory,scoreSource),[playHistory,scoreSource]);
  const savedPlayVersions=useMemo(()=>storedPlayVersions(playHistory),[playHistory]);
@@ -299,13 +300,6 @@ export default function Home(){
    <div><Choice label="編集中の譜面難易度" value={selected.id} onChange={changeEditorChart} disabled={!ready||busy||!!storageError} items={charts.filter(c=>c.songId===selected.songId&&c.mode===mode).map(c=>({value:c.id,label:`${c.difficulty} ☆${c.level||'?'}`}))}/></div>
   </div>
   <div className="editor-scroll">
-   {scoreGraphMode&&<ScoreGraph key={selected.id} chart={selected} scores={playHistory[selected.id]} versions={savedPlayVersions.versions} unknown={savedPlayVersions.unknown} colors={scoreGraphColors} seriesNames={seriesNames}/>}
-   {showPlayData&&<><PlayScoreDetails score={playRecords[selected.id]} chart={selected} display={playDisplay} sourceLabel={selectedScoreSource} songRecord={resolveSongPlayRecord(app.playData?.songRecords?.[`${selected.songId}:${selected.mode}`],scoreSource,playHistory)}/><PlayScoreHistory scores={chartPlayHistory(playHistory,selected.id)} seriesNames={seriesNames} songRecords={app.playData?.songRecords?.[`${selected.songId}:${selected.mode}`]}/></>}
-   <ManualPlayEditor key={selected.id} chart={selected} title={activeSong.title} history={playHistory} seriesNames={seriesNames} source={scoreSource} disabled={!ready||busy||!!storageError} onSave={async input=>{await commit(s=>applyManualPlay(s,selected,input));toast.success('手入力のプレイデータを保存しました。');}}/>
-   <ManualChartEditor key={`chart-${selected.id}`} chart={selected} title={activeSong.title} displayBpm={selected.bpm??activeSong.bpm} disabled={!ready||busy||!!storageError} onSave={async data=>{await commit(s=>{const manualCharts={...s.manualCharts},id=canonicalChartId(selected.id);delete manualCharts[selected.id];if(data.bpm===undefined&&data.noteCount===undefined&&!data.radarValues)delete manualCharts[id];else manualCharts[id]=data;return {...s,manualCharts};});toast.success('手入力の譜面データを保存しました。');}}/>
-   <ImportedChartDetails song={activeSong} chart={selected}/>
-   {showUnofficial&&<div className="editor-community"><CommunityRating chart={selected} table={table} gauge={gauge} cpiGauge={cpiGauge} automatic/></div>}
-   {showRadar&&<section className="editor-radar"><div className="radar-heading"><h3>ノーツレーダー</h3><span>基準100 / 最大200</span></div><NotesRadar key={selected.id} chart={selected} title={activeSong.title}/><p>{selected.manualApplied?.includes('radarValues')?'未取得項目を手入力で補完':selected.supplementBase!==undefined?'通常DB＋目視確認JSON（不足分を補完）':selected.importedInfo?.radarValues!==undefined?'KONAMIフォーマットプロジェクト解析':'joy to the beat...'}{selected.radar?` · ${selected.radar.notes.toLocaleString()} notes`:''}</p></section>}
    {(selected.soflan??activeSong.soflan)&&<div className="soflan-info"><Activity size={17}/><span>ソフラン曲<small>区間ごとの調整はコメントに記録</small></span></div>}
    <fieldset disabled={!ready||!!storageError||busy} className="editor-fields">
    {numberDefaults&&<p className="common-number-editor-help">空欄は共通値：緑 {numberDefaults.green||'—'} ／ SUD+ {numberDefaults.whiteTop||'—'}{showLift&&<>・LIFT {numberDefaults.whiteBottom||'—'}</>}。この譜面だけ変更する場合は数値を入力してください。</p>}
@@ -322,6 +316,21 @@ export default function Home(){
     <div className="side-fields two-sides dp-comments">{(['1P','2P'] as Side[]).map(side=>{const key=side==='1P'?'left':'right';return <div key={side}><label className="field-label" htmlFor={`dp-${side}-comment`}>{side} コメント</label><textarea id={`dp-${side}-comment`} aria-label={`${side} コメント`} value={draft[key].comment} onChange={e=>setNote({...draft,[key]:{...draft[key],comment:e.target.value}})} maxLength={2000} placeholder="配置の狙い、注意点など" rows={3}/></div>;})}</div>
    </>}
    </fieldset><p className="editor-help">{mode==='SP'?`${spSide}側の設定です。反対側の設定は別に保持します。`:'譜面配置は左右別、表示オプションは左右共通で保存します。'}</p>
+   <div className="editor-additional" aria-label="追加情報">
+    <EditorSection title="スコア・プレイ履歴" open={editorSections.score} disabled={!viewReady} onOpenChange={open=>setViewField('editorSections',current=>({...current,score:open}))}>
+   {scoreGraphMode&&<ScoreGraph key={selected.id} chart={selected} scores={playHistory[selected.id]} versions={savedPlayVersions.versions} unknown={savedPlayVersions.unknown} colors={scoreGraphColors} seriesNames={seriesNames}/>}
+   {showPlayData&&<><PlayScoreDetails score={playRecords[selected.id]} chart={selected} display={playDisplay} sourceLabel={selectedScoreSource} songRecord={resolveSongPlayRecord(app.playData?.songRecords?.[`${selected.songId}:${selected.mode}`],scoreSource,playHistory)}/><PlayScoreHistory scores={chartPlayHistory(playHistory,selected.id)} seriesNames={seriesNames} songRecords={app.playData?.songRecords?.[`${selected.songId}:${selected.mode}`]}/></>}
+   <ManualPlayEditor key={selected.id} chart={selected} title={activeSong.title} history={playHistory} seriesNames={seriesNames} source={scoreSource} disabled={!ready||busy||!!storageError} onSave={async input=>{await commit(s=>applyManualPlay(s,selected,input));toast.success('手入力のプレイデータを保存しました。');}}/>
+    </EditorSection>
+    {(showRadar||showUnofficial)&&<EditorSection title="レーダー・難易度" open={editorSections.radar} disabled={!viewReady} onOpenChange={open=>setViewField('editorSections',current=>({...current,radar:open}))}>
+   {showUnofficial&&<div className="editor-community"><CommunityRating chart={selected} table={table} gauge={gauge} cpiGauge={cpiGauge} automatic/></div>}
+   {showRadar&&<section className="editor-radar"><div className="radar-heading"><h3>ノーツレーダー</h3><span>基準100 / 最大200</span></div><NotesRadar key={selected.id} chart={selected} title={activeSong.title}/><p>{selected.manualApplied?.includes('radarValues')?'未取得項目を手入力で補完':selected.supplementBase!==undefined?'通常DB＋目視確認JSON（不足分を補完）':selected.importedInfo?.radarValues!==undefined?'取り込みJSON':'joy to the beat...'}{selected.radar?` · ${selected.radar.notes.toLocaleString()} notes`:''}</p></section>}
+    </EditorSection>}
+    <EditorSection title="譜面情報・手入力" open={editorSections.chart} disabled={!viewReady} onOpenChange={open=>setViewField('editorSections',current=>({...current,chart:open}))}>
+   <ManualChartEditor key={`chart-${selected.id}`} chart={selected} title={activeSong.title} displayBpm={selected.bpm??activeSong.bpm} disabled={!ready||busy||!!storageError} onSave={async data=>{await commit(s=>{const manualCharts={...s.manualCharts},id=canonicalChartId(selected.id);delete manualCharts[selected.id];if(data.bpm===undefined&&data.noteCount===undefined&&!data.radarValues)delete manualCharts[id];else manualCharts[id]=data;return {...s,manualCharts};});toast.success('手入力の譜面データを保存しました。');}}/>
+   <ImportedChartDetails song={activeSong} chart={selected}/>
+    </EditorSection>
+   </div>
   </div>
   <div className="save-bar">{saveError&&!pendingAction&&<p className="save-error" role="alert">{saveError}</p>}<div className="save-state" aria-live="polite">{dirty?<><span className="unsaved-dot"/>未保存の変更</>:draft.updatedAt?<><Check size={14}/>保存済み<time>{new Date(draft.updatedAt).toLocaleDateString('ja-JP')}</time></>:<><span className="outline-dot"/>この譜面は未設定</>}</div><button className="save-button" disabled={!ready||busy||!!storageError} onClick={()=>void saveNote()}>{saving?<Loader2 size={18} className="spin"/>:<Save size={18}/>}設定を保存</button></div>
  </div>;

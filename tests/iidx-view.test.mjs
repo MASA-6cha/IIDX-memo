@@ -57,3 +57,13 @@ test('Source diagnostics default to hidden and persist when enabled',()=>{
  const legacy=JSON.parse(serializeLibraryView(initial));delete legacy.showTitleSource;
  assert.equal(parseLibraryView(JSON.stringify(legacy)).showTitleSource,false);
 });
+
+test('Editor panel preferences migrate closed, persist independently and survive filter reset',()=>{
+ const old={...initialLibraryView(),query:'冥',showRadar:false};delete old.editorSections;
+ const migrated=parseLibraryView(JSON.stringify({version:1,view:old}));
+ assert.deepEqual(migrated.editorSections,{score:false,radar:false,chart:false});
+ assert.equal(migrated.query,'冥');assert.equal(migrated.showRadar,false);
+ const view={...migrated,editorSections:{score:true,radar:false,chart:true}};
+ assert.deepEqual(parseLibraryView(serializeLibraryView(view)),view);
+ assert.deepEqual(clearLibraryFilters(view).editorSections,view.editorSections);
+});

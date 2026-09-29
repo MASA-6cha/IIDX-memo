@@ -43,7 +43,7 @@ test('Incomplete, unrelated and malformed backups never produce restorable data'
 const {restoreBackupData}=await loadSource('../lib/iidx-backup.ts');
 const {serializeLibraryView,parseLibraryView}=await loadSource('../lib/iidx-view.ts');
 const customView=()=>({
- ...initialLibraryView(),theme:'light',seriesTitleColors:false,
+ ...initialLibraryView(),theme:'light',seriesTitleColors:false,editorSections:{score:true,radar:true,chart:false},
  seriesColors:{dark:{'1.5':'#aAbBcC','33':'#123456'},light:{'-1':'#112233','33':'#fedcba'}},
  seriesOutlines:{dark:{'33':{enabled:true,color:'#987654'}},light:{'33':{enabled:false,color:'#ABCDEF'}}},
  query:'移行テスト',filters:{series:'33',artist:'artist',levels:[10,12],availability:'removed',soflan:true,features:['CN','MSS']},
