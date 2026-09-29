@@ -2,5 +2,5 @@ export const APP_INFO={
  author:'MA$A',
  tool:'GPT-6 Astra',
  createdDate:'2026年9月20日',
- version:'1.42.6',
+ version:'1.42.7',
 } as const;

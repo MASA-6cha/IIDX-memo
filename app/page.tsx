@@ -62,20 +62,18 @@ function Choice({label,value,onChange,items,disabled=false}:{label:string;value:
 const diffBadge=(d:Difficulty)=><span className={`difficulty ${d.toLowerCase()}`}>{d}</span>;
 function NumberField({label,title,unit,value,fallback,green=false,onChange}:{label:string;title:string;unit:string;value:string;fallback?:string;green?:boolean;onChange:(v:string)=>void}){
  return <label className={`number-field compact-number ${green?'green-field':''}`}>
-  <span className="number-title">{title}</span><span className="number-unit">{unit}</span>
-  <div className="number-value">{value===''&&fallback&&<span className="number-common-tag">共通</span>}<input aria-label={label} type="number" inputMode="numeric" min={green?1:0} max={green?9999:1000} step="1" placeholder={fallback||'—'} value={value} onChange={e=>onChange(e.target.value)}/></div>
+  <span className="number-heading"><span className="number-title">{title}</span><span className="number-unit">{unit}</span></span>
+  <div className="number-value"><input aria-label={label} type="number" inputMode="numeric" min={green?1:0} max={green?9999:1000} step="1" placeholder={fallback||'—'} value={value} onChange={e=>onChange(e.target.value)}/>{value===''&&fallback&&<span className="number-common-tag">共通</span>}</div>
  </label>;
 }
-function DisplayFields({value,onChange,label,defaults,showLift=true,dp=false}:{dp?:boolean;showLift?:boolean;value:DisplaySettings;onChange:(v:DisplaySettings)=>void;label:string;defaults?:NumberSettings}){
+function DisplayFields({value,onChange,label,defaults,showLift=true}:{showLift?:boolean;value:DisplaySettings;onChange:(v:DisplaySettings)=>void;label:string;defaults?:NumberSettings}){
  const field=<K extends keyof DisplaySettings>(k:K,v:DisplaySettings[K])=>onChange({...value,[k]:v});
  return <div className="display-fields compact-display">
   <div className="inline-choice"><span className="field-label">表示方式</span><Choice label={`${label} 表示オプション`} value={value.cover} onChange={v=>field('cover',v)} items={covers.map(v=>({value:v,label:v}))}/></div>
-  <div className={`compact-numbers ${dp?'dp-numbers':'sp-numbers'} ${showLift?'':'without-lift'}`}>
-   <div className="white-numbers"><span className="white-number-title">白数字</span><div className="white-number-inputs">
+  <div className={`compact-numbers ${showLift?'':'without-lift'}`}>
     <NumberField title="白数字" unit="SUD+" label={`${label} 白数字 SUD+`} value={value.whiteTop} fallback={defaults?.whiteTop} onChange={v=>field('whiteTop',v)}/>
     {showLift&&<NumberField title="白数字" unit="LIFT" label={`${label} 白数字 LIFT`} value={value.whiteBottom} fallback={defaults?.whiteBottom} onChange={v=>field('whiteBottom',v)}/>}
-   </div></div>
-   <NumberField title="緑数字" unit="譜面表示時間" label={`${label} 緑数字`} green value={value.green} fallback={defaults?.green} onChange={v=>field('green',v)}/>
+   <NumberField title="緑数字" unit="表示時間" label={`${label} 緑数字`} green value={value.green} fallback={defaults?.green} onChange={v=>field('green',v)}/>
   </div>
  </div>;
 }
@@ -83,8 +81,10 @@ function SideFields({value,onChange,side,dp,defaults,showLift=true}:{showLift?:b
  const field=<K extends keyof SideSettings>(k:K,v:SideSettings[K])=>onChange({...value,[k]:v});
  return <section className={`side-card ${side==='2P'?'second-side':''}`}>
   <div className="side-heading"><span className="side-number">{side}</span><span>{dp?(side==='1P'?'左サイド':'右サイド'):'プレイサイド'}</span><span className="tiny-line"/></div>
+  <div className={dp?undefined:"sp-placement"}>
   <div className={dp?"placement-choice":"inline-choice"}><div className="field-label">譜面配置</div><Choice label={`${side} 譜面配置`} value={value.style} onChange={v=>field('style',v)} items={styles.map(v=>({value:v,label:v==='NORMAL'?'NORMAL（正規）':v}))}/></div>
   <div className="assists"><label><Checkbox checked={value.autoScratch} onCheckedChange={v=>field('autoScratch',v===true)}/>A-SCRATCH</label><label><Checkbox checked={value.legacyNote} onCheckedChange={v=>field('legacyNote',v===true)}/>LEGACY NOTE</label></div>
+  </div>
   {!dp&&<><div className="sp-display"><DisplayFields showLift={showLift} label={side} defaults={defaults} value={value} onChange={v=>onChange({...value,...v})}/></div>
   <label className="field-label spaced" htmlFor={`${dp?'dp':'sp'}-${side}-comment`}>コメント</label><AutoComment id={`${dp?'dp':'sp'}-${side}-comment`} aria-label={`${side} コメント`} value={value.comment} onChange={e=>field('comment',e.target.value)} maxLength={2000} placeholder="低速前にシャッターを調整、など" />
   </>}
@@ -319,7 +319,7 @@ export default function Home(){
    {mode==='DP'&&<>
     <section className="shared-display" aria-label="DP左右共通の表示オプション">
      {hasLegacyDisplayConflict(draft)&&<div className="legacy-display"><p>旧データの左右で表示設定が異なります。共通にする値を選んでください。</p>{(['1P','2P'] as Side[]).map(side=>{const source=side==='1P'?draft.left:draft.right;return <button key={side} className="secondary-button" onClick={()=>setNote({...draft,display:displayFromSide(source)})}>{side}から引き継ぐ<small>{source.cover} / SUD+ {source.whiteTop||'—'}{showLift&&<>・LIFT {source.whiteBottom||'—'}</>} / 緑 {source.green||'—'}</small></button>;})}</div>}
-     <DisplayFields dp showLift={showLift} label="DP共通" defaults={numberDefaults} value={commonDisplay(draft)} onChange={v=>setNote({...draft,display:v})}/>
+     <DisplayFields showLift={showLift} label="DP共通" defaults={numberDefaults} value={commonDisplay(draft)} onChange={v=>setNote({...draft,display:v})}/>
     </section>
     <div className="dp-comments"><label className="field-label" htmlFor="dp-common-comment">コメント（左右共通）</label><AutoComment id="dp-common-comment" aria-label="DP 共通コメント" value={commonComment(draft)} onChange={e=>setNote({...draft,sharedComment:e.target.value})} maxLength={4100} placeholder="配置の狙い、注意点など"/></div>
    </>}
