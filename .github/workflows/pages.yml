@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -22,6 +22,26 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      # A manual run on iPhone imports the release prepared alongside the Site.
+      # Push runs skip this step and deploy the code already in the repository.
+      - name: Import latest Site release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          curl --fail --location --silent --show-error --retry 3 \
+            https://iidx-option-notes.ddrukmasa.chatgpt.site/github-update.patch \
+            --output /tmp/iidx-update.patch
+          if git apply --reverse --check /tmp/iidx-update.patch; then
+            echo 'This release is already present.'
+          else
+            git apply --check /tmp/iidx-update.patch
+            git apply /tmp/iidx-update.patch
+            git diff --check
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add --all
+            git commit -m 'Sync latest IIDX memo release from Site'
+            git push origin HEAD:main
+          fi
       - uses: pnpm/action-setup@v4
         with:
           version: 11.25.0
