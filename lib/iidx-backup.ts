@@ -16,7 +16,7 @@ const sideSchema=displaySchema.extend({
 }).strict();
 const dateSchema=z.string().max(40).refine(v=>Number.isFinite(Date.parse(v)));
 const noteSchema=z.object({
- left:sideSchema,right:sideSchema,display:displaySchema.optional(),flip:z.boolean(),
+ left:sideSchema,right:sideSchema,display:displaySchema.optional(),sharedComment:z.string().max(4100).optional(),flip:z.boolean(),
  link:z.enum(['OFF','SYNCHRONIZE','SYMMETRY']),updatedAt:dateSchema.optional(),
 }).strict();
 // IDs may belong to a later catalog. Retain them without requiring the current sample DB.

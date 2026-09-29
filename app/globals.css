@@ -194,3 +194,31 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 }
 .editor-bpm{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .editor-soflan{display:inline-flex;align-items:center;gap:3px;flex-shrink:0;color:var(--light-gold,#ddc28d);font-size:12px;line-height:1.5}
+
+/* Compact option editing, with grouped SP numbers and three DP number columns. */
+.editor .inline-choice{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px}
+.editor .inline-choice .field-label{margin:0;white-space:nowrap}
+.editor .inline-choice .choice{width:100%;min-width:0;font-size:14px;min-height:44px}
+.editor .sp-display{margin-top:12px}
+.editor .shared-display{margin-top:14px;padding-top:12px}
+.editor .compact-numbers{display:grid;gap:8px;margin-top:10px;align-items:stretch}
+.editor .sp-numbers{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
+.editor .dp-numbers{grid-template-columns:repeat(3,minmax(0,1fr))}
+.editor .compact-numbers.without-lift{grid-template-columns:repeat(2,minmax(0,1fr))}
+.editor .white-numbers{min-width:0;border:1px solid var(--light-line,#415473);background:var(--light-surface,#131d2c);border-radius:7px;padding:8px}
+.editor .white-number-title{display:block;font-size:14px;line-height:20px;margin-bottom:4px;color:var(--light-text,#c2d1e9)}
+.editor .white-number-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.editor .without-lift .white-number-inputs{grid-template-columns:minmax(0,1fr)}
+.editor .compact-numbers .compact-number{display:grid;grid-template-rows:auto 1fr auto;min-width:0;margin:0;padding:8px;gap:4px}
+.editor .compact-numbers .compact-number>span{display:block;min-width:0;width:auto;flex:none;line-height:20px}
+.editor .compact-numbers .compact-number .number-unit{font-size:12px;color:var(--light-muted,#a6bbd9);line-height:18px;overflow-wrap:anywhere}
+.editor .compact-numbers .compact-number .number-value{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:0;min-width:0;margin:0;flex:initial}
+.editor .compact-numbers .compact-number input{width:100%;min-width:0;height:36px;font-size:22px;line-height:30px;text-align:left;padding:2px 0;margin:0}
+.editor .compact-numbers .compact-number .number-common-tag{font-size:12px;line-height:16px;white-space:nowrap}
+.editor .sp-numbers .white-numbers .compact-number{border:0;background:none;border-radius:0;padding:0}
+.editor .sp-numbers .white-numbers .number-title{display:none}
+.editor .dp-numbers .white-numbers,.editor .dp-numbers .white-number-inputs{display:contents}
+.editor .dp-numbers .white-number-title{display:none}
+.editor .dp-comments{margin-top:14px}
+.editor .dp-comments>.field-label{display:block;margin-bottom:6px}
+.editor textarea.auto-comment{min-height:70px;max-height:166px;height:70px;padding:10px;line-height:24px;resize:none;overflow-y:hidden;field-sizing:fixed}

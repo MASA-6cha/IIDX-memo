@@ -12,7 +12,7 @@ import {AlertDialog,AlertDialogContent,AlertDialogTitle,AlertDialogDescription,A
 import {BrowserInstallNotice} from '@/components/browser-install-notice';
 import {Toaster} from '@/components/ui/sonner';
 import {toast} from 'sonner';
-import {songs as sampleSongs,charts as sampleCharts,songById as sampleSongById,seriesNames as sampleSeriesNames,seriesCode,difficulties,styles,covers,blankNote,initialState,noteKey,normalized,commonDisplay,displayFromSide,hasLegacyDisplayConflict,type AppState,type Catalog,type Chart,type Mode,type Side,type Note,type SideSettings,type DisplaySettings,type NumberSettings,type Difficulty,type CpiGauge} from '@/lib/iidx-data';
+import {songs as sampleSongs,charts as sampleCharts,songById as sampleSongById,seriesNames as sampleSeriesNames,seriesCode,difficulties,styles,covers,blankNote,commonComment,initialState,noteKey,normalized,commonDisplay,displayFromSide,hasLegacyDisplayConflict,type AppState,type Catalog,type Chart,type Mode,type Side,type Note,type SideSettings,type DisplaySettings,type NumberSettings,type Difficulty,type CpiGauge} from '@/lib/iidx-data';
 import {readLibrary,writeState} from '@/lib/iidx-storage';
 import {ArtistFilter} from '@/components/artist-filter';
 import {OptionSummary} from '@/components/option-summary';
@@ -44,6 +44,7 @@ import {CommonNumberSettings} from '@/components/common-number-settings';
 import {chartCommonNumbers,effectiveNumberNote,applyNumberAction} from '@/lib/common-numbers';
 import {SettingsSection} from '@/components/settings-section';
 import {EditorSection} from '@/components/editor-section';
+import {AutoComment} from '@/components/auto-comment';
 import {MyActivity} from '@/components/my-activity';
 import {hasPlaySummary,playDisplayFields} from '@/lib/play-display';
 import {resolveSongPlayRecord,chartPlayHistory,resolvePlayRecords,storedPlayVersions,scoreSourceLabel,type ScoreSource} from '@/lib/play-history';
@@ -59,25 +60,33 @@ function Choice({label,value,onChange,items,disabled=false}:{label:string;value:
  return <Select value={value} onValueChange={onChange} disabled={disabled}><SelectTrigger aria-label={label} className="choice"><SelectValue/></SelectTrigger><SelectContent position="popper" side="bottom" align="start" collisionPadding={12} className="choice-menu">{items.map(i=><SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}</SelectContent></Select>;
 }
 const diffBadge=(d:Difficulty)=><span className={`difficulty ${d.toLowerCase()}`}>{d}</span>;
-function DisplayFields({value,onChange,label,defaults,showLift=true}:{showLift?:boolean;value:DisplaySettings;onChange:(v:DisplaySettings)=>void;label:string;defaults?:NumberSettings}){
+function NumberField({label,title,unit,value,fallback,green=false,onChange}:{label:string;title:string;unit:string;value:string;fallback?:string;green?:boolean;onChange:(v:string)=>void}){
+ return <label className={`number-field compact-number ${green?'green-field':''}`}>
+  <span className="number-title">{title}</span><span className="number-unit">{unit}</span>
+  <div className="number-value">{value===''&&fallback&&<span className="number-common-tag">共通</span>}<input aria-label={label} type="number" inputMode="numeric" min={green?1:0} max={green?9999:1000} step="1" placeholder={fallback||'—'} value={value} onChange={e=>onChange(e.target.value)}/></div>
+ </label>;
+}
+function DisplayFields({value,onChange,label,defaults,showLift=true,dp=false}:{dp?:boolean;showLift?:boolean;value:DisplaySettings;onChange:(v:DisplaySettings)=>void;label:string;defaults?:NumberSettings}){
  const field=<K extends keyof DisplaySettings>(k:K,v:DisplaySettings[K])=>onChange({...value,[k]:v});
- return <div className="display-fields">
-  <div className="field-label">表示方式</div><Choice label={`${label} 表示オプション`} value={value.cover} onChange={v=>field('cover',v)} items={covers.map(v=>({value:v,label:v}))}/>
-  <div className={`number-pair ${showLift?'':'without-lift'}`}>
-   <label className="number-field"><span>白数字<span className="field-unit">SUD+</span></span><div className="number-value">{value.whiteTop===''&&defaults?.whiteTop!==undefined&&defaults.whiteTop!==''&&<span className="number-common-tag">共通</span>}<input aria-label={`${label} 白数字 SUD+`} type="number" inputMode="numeric" min="0" max="1000" step="1" placeholder={defaults?.whiteTop||'—'} value={value.whiteTop} onChange={e=>field('whiteTop',e.target.value)}/></div></label>
-   {showLift&&<label className="number-field"><span>白数字<span className="field-unit">LIFT</span></span><div className="number-value">{value.whiteBottom===''&&defaults?.whiteBottom!==undefined&&defaults.whiteBottom!==''&&<span className="number-common-tag">共通</span>}<input aria-label={`${label} 白数字 LIFT`} type="number" inputMode="numeric" min="0" max="1000" step="1" placeholder={defaults?.whiteBottom||'—'} value={value.whiteBottom} onChange={e=>field('whiteBottom',e.target.value)}/></div></label>}
+ return <div className="display-fields compact-display">
+  <div className="inline-choice"><span className="field-label">表示方式</span><Choice label={`${label} 表示オプション`} value={value.cover} onChange={v=>field('cover',v)} items={covers.map(v=>({value:v,label:v}))}/></div>
+  <div className={`compact-numbers ${dp?'dp-numbers':'sp-numbers'} ${showLift?'':'without-lift'}`}>
+   <div className="white-numbers"><span className="white-number-title">白数字</span><div className="white-number-inputs">
+    <NumberField title="白数字" unit="SUD+" label={`${label} 白数字 SUD+`} value={value.whiteTop} fallback={defaults?.whiteTop} onChange={v=>field('whiteTop',v)}/>
+    {showLift&&<NumberField title="白数字" unit="LIFT" label={`${label} 白数字 LIFT`} value={value.whiteBottom} fallback={defaults?.whiteBottom} onChange={v=>field('whiteBottom',v)}/>}
+   </div></div>
+   <NumberField title="緑数字" unit="譜面表示時間" label={`${label} 緑数字`} green value={value.green} fallback={defaults?.green} onChange={v=>field('green',v)}/>
   </div>
-  <label className="number-field green-field"><span><span className="green-dot"/>緑数字<small>譜面表示時間</small></span><div className="number-value">{value.green===''&&defaults?.green!==undefined&&defaults.green!==''&&<span className="number-common-tag">共通</span>}<input aria-label={`${label} 緑数字`} type="number" inputMode="numeric" min="1" max="9999" step="1" placeholder={defaults?.green||'—'} value={value.green} onChange={e=>field('green',e.target.value)}/></div></label>
  </div>;
 }
 function SideFields({value,onChange,side,dp,defaults,showLift=true}:{showLift?:boolean;value:SideSettings;onChange:(v:SideSettings)=>void;side:Side;dp:boolean;defaults?:NumberSettings}){
  const field=<K extends keyof SideSettings>(k:K,v:SideSettings[K])=>onChange({...value,[k]:v});
  return <section className={`side-card ${side==='2P'?'second-side':''}`}>
   <div className="side-heading"><span className="side-number">{side}</span><span>{dp?(side==='1P'?'左サイド':'右サイド'):'プレイサイド'}</span><span className="tiny-line"/></div>
-  <div className="field-label">譜面配置</div><Choice label={`${side} 譜面配置`} value={value.style} onChange={v=>field('style',v)} items={styles.map(v=>({value:v,label:v==='NORMAL'?'NORMAL（正規）':v}))}/>
+  <div className={dp?"placement-choice":"inline-choice"}><div className="field-label">譜面配置</div><Choice label={`${side} 譜面配置`} value={value.style} onChange={v=>field('style',v)} items={styles.map(v=>({value:v,label:v==='NORMAL'?'NORMAL（正規）':v}))}/></div>
   <div className="assists"><label><Checkbox checked={value.autoScratch} onCheckedChange={v=>field('autoScratch',v===true)}/>A-SCRATCH</label><label><Checkbox checked={value.legacyNote} onCheckedChange={v=>field('legacyNote',v===true)}/>LEGACY NOTE</label></div>
   {!dp&&<><div className="sp-display"><DisplayFields showLift={showLift} label={side} defaults={defaults} value={value} onChange={v=>onChange({...value,...v})}/></div>
-  <label className="field-label spaced" htmlFor={`${dp?'dp':'sp'}-${side}-comment`}>コメント</label><textarea id={`${dp?'dp':'sp'}-${side}-comment`} aria-label={`${side} コメント`} value={value.comment} onChange={e=>field('comment',e.target.value)} maxLength={2000} placeholder="低速前にシャッターを調整、など" rows={dp?3:4}/>
+  <label className="field-label spaced" htmlFor={`${dp?'dp':'sp'}-${side}-comment`}>コメント</label><AutoComment id={`${dp?'dp':'sp'}-${side}-comment`} aria-label={`${side} コメント`} value={value.comment} onChange={e=>field('comment',e.target.value)} maxLength={2000} placeholder="低速前にシャッターを調整、など" />
   </>}
  </section>;
 }
@@ -167,7 +176,7 @@ export default function Home(){
   for(const v of [display.whiteTop,display.whiteBottom])if(v!==''&&(!/^\d+$/.test(v)||+v>1000))return reject('白数字は0〜1000の整数で入力してください。');
   if(display.green!==''&&(!/^\d+$/.test(display.green)||+display.green<1||+display.green>9999))return reject('緑数字は1〜9999の整数で入力してください。');
   saveLock.current=true;setSaving(true);setSaveError('');
-  const note:Note={...draft,...(mode==='DP'?{display:{...display}}:{}),updatedAt:new Date().toISOString()},key=noteKey(selected,spSide);
+  const note:Note={...draft,...(mode==='DP'?{display:{...display},sharedComment:commonComment(draft)}:{}),updatedAt:new Date().toISOString()},key=noteKey(selected,spSide);
   try{await commit(s=>({...s,notes:{...s.notes,[key]:note}}));setDraft(note);setDirty(false);toast.success(`${songById[selected.songId].title} · ${selected.mode} ${selected.difficulty}${mode==='SP'?` ${spSide}`:''} の設定を保存しました`);return true;}catch{return reject('保存できませんでした。入力内容は残っています。もう一度お試しください。');}finally{saveLock.current=false;setSaving(false);}
  };
  const finishPending=async(save:boolean)=>{const action=pendingAction;if(!action||saveLock.current||transitionLock.current)return;if(save&&!(await saveNote()))return;if(await perform(action.run))setPendingAction(null);};
@@ -308,13 +317,13 @@ export default function Home(){
     {(mode==='DP'||spSide==='2P')&&<SideFields showLift={showLift} dp={mode==='DP'} side="2P" defaults={numberDefaults} value={draft.right} onChange={v=>setNote({...draft,right:v,...(v.style!=='RANDOM'?{link:'OFF'}:{})})}/>}
    </div>
    {mode==='DP'&&<>
-    <section className="shared-display"><div className="shared-heading"><h3>表示オプション</h3><span>左右共通</span></div>
+    <section className="shared-display" aria-label="DP左右共通の表示オプション">
      {hasLegacyDisplayConflict(draft)&&<div className="legacy-display"><p>旧データの左右で表示設定が異なります。共通にする値を選んでください。</p>{(['1P','2P'] as Side[]).map(side=>{const source=side==='1P'?draft.left:draft.right;return <button key={side} className="secondary-button" onClick={()=>setNote({...draft,display:displayFromSide(source)})}>{side}から引き継ぐ<small>{source.cover} / SUD+ {source.whiteTop||'—'}{showLift&&<>・LIFT {source.whiteBottom||'—'}</>} / 緑 {source.green||'—'}</small></button>;})}</div>}
-     <DisplayFields showLift={showLift} label="DP共通" defaults={numberDefaults} value={commonDisplay(draft)} onChange={v=>setNote({...draft,display:v})}/>
+     <DisplayFields dp showLift={showLift} label="DP共通" defaults={numberDefaults} value={commonDisplay(draft)} onChange={v=>setNote({...draft,display:v})}/>
     </section>
-    <div className="side-fields two-sides dp-comments">{(['1P','2P'] as Side[]).map(side=>{const key=side==='1P'?'left':'right';return <div key={side}><label className="field-label" htmlFor={`dp-${side}-comment`}>{side} コメント</label><textarea id={`dp-${side}-comment`} aria-label={`${side} コメント`} value={draft[key].comment} onChange={e=>setNote({...draft,[key]:{...draft[key],comment:e.target.value}})} maxLength={2000} placeholder="配置の狙い、注意点など" rows={3}/></div>;})}</div>
+    <div className="dp-comments"><label className="field-label" htmlFor="dp-common-comment">コメント（左右共通）</label><AutoComment id="dp-common-comment" aria-label="DP 共通コメント" value={commonComment(draft)} onChange={e=>setNote({...draft,sharedComment:e.target.value})} maxLength={4100} placeholder="配置の狙い、注意点など"/></div>
    </>}
-   </fieldset><p className="editor-help">{mode==='SP'?`${spSide}側の設定です。反対側の設定は別に保持します。`:'譜面配置は左右別、表示オプションは左右共通で保存します。'}</p>
+   </fieldset><p className="editor-help">{mode==='SP'?`${spSide}側の設定です。反対側の設定は別に保持します。`:'譜面配置は左右別、表示オプションとコメントは左右共通で保存します。'}</p>
    <div className="editor-additional" aria-label="追加情報">
     <EditorSection title="スコア・プレイ履歴" open={editorSections.score} disabled={!viewReady} onOpenChange={open=>setViewField('editorSections',current=>({...current,score:open}))}>
    {scoreGraphMode&&<ScoreGraph key={selected.id} chart={selected} scores={playHistory[selected.id]} versions={savedPlayVersions.versions} unknown={savedPlayVersions.unknown} colors={scoreGraphColors} seriesNames={seriesNames}/>}

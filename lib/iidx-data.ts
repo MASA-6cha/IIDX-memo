@@ -50,8 +50,16 @@ export const styles=['NORMAL','MIRROR','RANDOM','R-RANDOM','S-RANDOM'];
 export const covers=['OFF','SUDDEN+','HIDDEN+','SUDDEN+ & HIDDEN+','LIFT','LIFT & SUDDEN+'];
 export interface SideSettings{style:string;cover:string;whiteTop:string;whiteBottom:string;green:string;comment:string;autoScratch:boolean;legacyNote:boolean}
 export type DisplaySettings=Pick<SideSettings,'cover'|'whiteTop'|'whiteBottom'|'green'>;
-export interface Note{left:SideSettings;right:SideSettings;display?:DisplaySettings;flip:boolean;link:string;updatedAt?:string}
+export interface Note{left:SideSettings;right:SideSettings;display?:DisplaySettings;sharedComment?:string;flip:boolean;link:string;updatedAt?:string}
 export const displayFromSide=(s:SideSettings):DisplaySettings=>({cover:s.cover,whiteTop:s.whiteTop,whiteBottom:s.whiteBottom,green:s.green});
+// Legacy DP notes retain both side comments until the shared text is saved.
+export function commonComment(n:Note):string{
+ if(n.sharedComment!==undefined)return n.sharedComment;
+ const left=n.left.comment,right=n.right.comment;
+ if(left===right||!right)return left;
+ if(!left)return right;
+ return `[1P]\n${left}\n\n[2P]\n${right}`;
+}
 export const commonDisplay=(n:Note):DisplaySettings=>n.display??displayFromSide(n.left);
 export const hasLegacyDisplayConflict=(n:Note)=>!n.display&&JSON.stringify(displayFromSide(n.left))!==JSON.stringify(displayFromSide(n.right));
 export interface Folder{id:string;name:string;color:string;songIds:string[]}
