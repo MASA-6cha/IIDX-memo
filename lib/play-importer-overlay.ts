@@ -1,6 +1,7 @@
 import {collectPlayPages,formatPlayCharts,parsePlayPage,displayedPlayMode,playDiagnostic} from './play-scraper';
 import {playImporterVersion} from './play-format';
 import {sendPlayHandoff} from './play-handoff';
+import {copyPlayText,selectPlayText} from './play-clipboard';
 import type {Mode} from './iidx-data';
 
 export function showPlayImporter(doc:Document,version:number){
@@ -15,7 +16,7 @@ export function showPlayImporter(doc:Document,version:number){
  <label>取得する範囲<select id="range"><option value="all">全難度（☆1〜12）</option><option value="high">☆11・12のみ</option></select></label>
  <div class="actions"><button id="start">取得開始</button><button id="cancel" hidden>中止</button></div>
  <p id="status" role="status">取得中はこの画面を開いたままにしてください。</p>
- <div id="result" hidden><p><strong>同じブラウザでIIDX memoを使っている場合</strong></p><div class="actions"><button id="send">アプリへ渡す（ブラウザ版）</button></div><p>新しいタブで取り込み内容を確認できます。まだ保存はされません。</p><p><strong>ホーム画面からIIDX memoを使っている場合</strong></p><div class="actions"><button id="copy">結果をコピー</button></div><p>コピー後にホーム画面版へ戻り、全体設定の「貼り付けて確認」を押してください。ブラウザ版と保存先が異なる場合があります。</p><details><summary>取得結果を表示・手動でコピー</summary><textarea id="output" aria-label="取得したプレイデータ" readonly></textarea><button id="select">すべて選択</button></details></div>
+ <div id="result" hidden><div class="actions"><button id="copy">結果をコピー</button></div><p id="copy-status" role="status" aria-live="polite">コピー後にIIDX memoへ戻り、全体設定の「貼り付けて確認」を押してください。ホーム画面版にもこの方法で取り込めます。</p><details><summary>取得結果を表示・手動でコピー</summary><textarea id="output" aria-label="取得したプレイデータ" readonly></textarea><button id="select">すべて選択</button></details><p><strong>同じブラウザでIIDX memoを使っている場合</strong></p><div class="actions"><button id="send">アプリへ渡す（ブラウザ版）</button></div><p>新しいタブで取り込み内容を確認できます。まだ保存はされません。ブラウザ版とホーム画面版は保存先が異なる場合があります。</p></div>
  <details id="current-help"><summary>表示中のページだけ取得</summary><p>いま開いている一覧を直接読み取ります。別のページ・別の難度の曲は含まれません。画面と同じSP・DPを選んでください。</p><button id="current">このページを読み取る</button></details>
  <details id="diagnostic" hidden><summary>エラーの診断情報</summary><p>表の構造を表示します。下の「診断情報をコピー」の内容を問い合わせ時に貼り付けてください。曲名・スコア・ログイン情報は含めず、自動送信もしません。</p><textarea id="diagnostic-output" aria-label="診断情報" readonly></textarea><button id="diagnostic-copy">診断情報をコピー</button></details>
  </section>`;
@@ -26,10 +27,18 @@ export function showPlayImporter(doc:Document,version:number){
  let controller:AbortController|undefined,running=false,stage='',stopHandoff:(()=>void)|undefined;
  const send=el<HTMLButtonElement>('send');send.style.cssText='background:#77e5d2;color:#103c36;font-weight:700';
  el('close').onclick=()=>{controller?.abort();stopHandoff?.();host.remove();};cancel.onclick=()=>controller?.abort();
- const select=(field:HTMLTextAreaElement)=>{const details=field.closest('details');if(details)details.open=true;field.focus();field.select();field.setSelectionRange(0,field.value.length);};
- const copy=async(field:HTMLTextAreaElement,message:string)=>{try{await navigator.clipboard.writeText(field.value);status.textContent=message;}catch{select(field);status.textContent='テキストを選択しました。長押しのメニューからコピーしてください。';}};
- el('select').onclick=()=>{select(output);status.textContent='すべて選択しました。端末のメニューからコピーできます。';};
- el('copy').onclick=()=>void copy(output,'コピーしました。普段使っているIIDX memoに戻り、全体設定の「貼り付けて確認」を押してください。');
+ const copyButton=el<HTMLButtonElement>('copy'),copyStatus=el('copy-status');
+ const copy=async(field:HTMLTextAreaElement,message:string,feedback:HTMLElement=status)=>{
+  const copied=await copyPlayText(field);
+  feedback.textContent=copied?message:'自動コピーできませんでした。取得結果を選択しています。長押しのメニューから「コピー」を押してください。';
+  return copied;
+ };
+ el('select').onclick=()=>{selectPlayText(output);copyStatus.textContent='すべて選択しました。長押しのメニューから「コピー」を押してください。';};
+ copyButton.onclick=async()=>{
+  if(copyButton.disabled)return;copyButton.disabled=true;
+  try{const copied=await copy(output,'コピーしました。IIDX memoに戻り、全体設定の「貼り付けて確認」を押してください。',copyStatus);copyButton.textContent=copied?'コピー済み（もう一度コピー）':'結果をコピー';}
+  finally{copyButton.disabled=false;}
+ };
  send.onclick=()=>{
   stopHandoff?.();
   stopHandoff=sendPlayHandoff(doc.defaultView!,output.value,phase=>{
@@ -38,19 +47,20 @@ export function showPlayImporter(doc:Document,version:number){
   });
  };
  el('diagnostic-copy').onclick=()=>void copy(diagnosticOutput,'診断情報をコピーしました。問い合わせ時に貼り付けてください。');
- const reset=()=>{stopHandoff?.();send.disabled=false;result.hidden=true;output.value='';diagnostic.hidden=true;diagnosticOutput.value='';};
+ const reset=()=>{stopHandoff?.();send.disabled=false;result.hidden=true;output.value='';copyButton.textContent='結果をコピー';copyStatus.textContent='コピー後にIIDX memoへ戻り、全体設定の「貼り付けて確認」を押してください。ホーム画面版にもこの方法で取り込めます。';diagnostic.hidden=true;diagnosticOutput.value='';};
+ const showResult=(csv:string,message:string)=>{output.value=csv;result.hidden=false;status.textContent=message;copyButton.scrollIntoView({block:'nearest'});copyButton.focus({preventScroll:true});};
  const showError=(error:unknown)=>{status.textContent=`${stage}\n${error instanceof Error?error.message:'取得できませんでした。'}\n診断情報を下に表示しました。`;diagnosticOutput.value=playDiagnostic(error,stage,doc);diagnostic.hidden=false;diagnostic.open=true;el<HTMLDetailsElement>('current-help').open=true;};
  current.onclick=()=>{
   if(running)return;reset();stage='表示中のページ';
   try{
    if(mode.value==='both')throw new Error('画面と同じSP・DPを選んでください。');
    const page=parsePlayPage(doc,mode.value as Mode),data=formatPlayCharts(page.charts.map(c=>({...c,mode:mode.value as Mode})),version);
-   output.value=data.csv;result.hidden=false;status.textContent=`このページの${mode.value} ${data.count}譜面を読み取りました。全曲取得ではありません。下のボタンでアプリへ渡してください。`;
+   showResult(data.csv,`このページの${mode.value} ${data.count}譜面を読み取りました。全曲取得ではありません。「結果をコピー」を押してください。`);
   }catch(error){showError(error);}
  };
  start.onclick=async()=>{
   if(running)return;running=true;controller=new AbortController();reset();start.disabled=true;current.disabled=true;mode.disabled=true;range.disabled=true;cancel.hidden=false;
-  try{const data=await collectPlayPages({modes:mode.value==='both'?['SP','DP']:[mode.value as Mode],levels:range.value==='all'?Array.from({length:12},(_,i)=>i+1):[11,12],version,signal:controller.signal,onProgress:v=>{stage=v;status.textContent=v;}});output.value=data.csv;result.hidden=false;status.textContent=`選択範囲の${data.count}譜面を取得しました。下のボタンでアプリへ渡してください。`;}
+  try{const data=await collectPlayPages({modes:mode.value==='both'?['SP','DP']:[mode.value as Mode],levels:range.value==='all'?Array.from({length:12},(_,i)=>i+1):[11,12],version,signal:controller.signal,onProgress:v=>{stage=v;status.textContent=v;}});showResult(data.csv,`選択範囲の${data.count}譜面を取得しました。「結果をコピー」を押してください。`);}
   catch(error){if(controller.signal.aborted)status.textContent='取得を中止しました。途中のデータはコピーしていません。';else showError(error);}
   finally{running=false;start.disabled=false;current.disabled=false;mode.disabled=false;range.disabled=false;cancel.hidden=true;}
  };
