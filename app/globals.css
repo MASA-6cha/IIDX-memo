@@ -178,6 +178,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .score-graph-benchmark .score-grade-max{display:inline-block;filter:drop-shadow(0 1px 3px #101a29) drop-shadow(0 0 3px #101a29)}
 .app-update-count{white-space:nowrap}
 .public-json-url{display:block;width:100%;max-width:100%;min-height:76px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-all;resize:none;overflow:hidden;box-sizing:border-box}
+.favorite-menu{position:relative}.favorite-menu h3{padding-right:36px}.favorite-close{position:absolute;top:8px;right:8px;width:36px;height:36px}
 
 /* Options stay first; supplementary panels remember their expanded state. */
 .editor-additional{margin-top:16px;border-top:1px solid var(--border)}
