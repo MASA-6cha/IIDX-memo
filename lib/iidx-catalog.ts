@@ -111,7 +111,9 @@ export function migrateLegacyState(state:AppState,catalog:Catalog):{state:AppSta
 }
 
 export function mergeCatalog(previous:Catalog|null,incoming:Catalog,state:AppState){
+ const identityHints=[...incoming.songs,...(previous?.songs??[])];
  const supplementData=incoming.supplementData??previous?.supplementData;
+ const wikiData=incoming.wikiData??previous?.wikiData;
  previous=stripSupplement(previous);incoming=stripSupplement(incoming)!;
  incoming={...incoming,songIdentities:{links:{...state.songIdentities?.links,...previous?.songIdentities?.links,...incoming.songIdentities?.links},redirects:{...state.songIdentities?.redirects,...previous?.songIdentities?.redirects,...incoming.songIdentities?.redirects}}};
  incoming=reconcileSongIdentities(preserveImportedCatalog(previous,incoming));
@@ -122,7 +124,7 @@ export function mergeCatalog(previous:Catalog|null,incoming:Catalog,state:AppSta
   const id=resolveChartId(canonicalChartId(c.id),incoming.songIdentities?.redirects),songId=resolveSongId(canonicalSongId(c.songId),incoming.songIdentities?.redirects);
   if(!charts.has(id)&&songs.has(songId)&&(previous||state.manualCharts?.[c.id]||state.manualCharts?.[id]||state.playData?.records[c.id]||state.playData?.records[id]||state.playData?.history?.[c.id]||state.playData?.history?.[id]||Object.keys(state.notes).some(key=>key===c.id||key.startsWith(`${c.id}:`)||key===id||key.startsWith(`${id}:`))))charts.set(id,{...c,id,songId,retained:c.importedInfo?c.retained:true});
  }
- const catalog:Catalog=applySavedSupplement(reconcileSongIdentities({...incoming,supplementData,seriesNames:{...previous?.seriesNames,...incoming.seriesNames},songs:Array.from(songs.values()),charts:Array.from(charts.values())}));
+ const catalog:Catalog=applySavedSupplement(reconcileSongIdentities({...incoming,supplementData,wikiData,seriesNames:{...previous?.seriesNames,...incoming.seriesNames},songs:Array.from(songs.values()),charts:Array.from(charts.values())}),identityHints);
  const oldSongIds=new Set((previous?.songs??[]).map(s=>s.id)),oldChartIds=new Set((previous?.charts??[]).map(c=>c.id));
  return {catalog,addedSongs:incoming.songs.filter(s=>!oldSongIds.has(s.id)).length,addedCharts:incoming.charts.filter(c=>!oldChartIds.has(c.id)).length,retainedCharts:catalog.charts.filter(c=>c.retained).length};
 }

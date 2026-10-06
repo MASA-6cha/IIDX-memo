@@ -12,7 +12,7 @@ self.onmessage=async(event:MessageEvent<{file?:File;url?:string}>)=>{
    text=downloaded.text;origin={label:'GitHub JSON',url:downloaded.url};
   }
   self.postMessage({type:'progress',message:'曲・譜面データを検証中…'});
-  const data=parseCatalogImport(text);self.postMessage({type:'complete',data,origin});
+  const data=parseCatalogImport(text);if(data.kind==='wiki'&&origin.url)origin.label='BEMANIWiki IIDX34 JSON';self.postMessage({type:'complete',data,origin});
  }catch(error){self.postMessage({type:'error',message:controller.signal.aborted?'取得が時間内に完了しませんでした。ファイル選択も利用できます。':error instanceof Error?error.message:'JSONを読み取れませんでした。'});}
  finally{clearTimeout(timeout);}
 };
