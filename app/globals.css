@@ -165,7 +165,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .header-difficulty-button{flex:none;gap:2px;font-size:12px;font-weight:800;width:40px;color:var(--text);border:1px solid var(--border);border-radius:9px}
 .header-difficulty-button.beginner{color:#8cd882}.header-difficulty-button.normal{color:#80b9fa}.header-difficulty-button.hyper{color:#ead575}.header-difficulty-button.another{color:#f18491}.header-difficulty-button.leggendaria{color:#c891f3}
 @media(max-width:480px){.app-header .header-right{gap:6px}.app-header .brand-secondary{margin-left:9px;padding-left:9px}.app-header .brand-subtitle{font-size:9px}.app-header .brand>span:last-child{font-size:24px}}
-.score-graph .score-grade-max{background:linear-gradient(100deg,#ff788d,#ffdc73,#a9ec8c,#77dffd,#b79bff);background-clip:text;-webkit-background-clip:text;color:transparent}
+.score-graph .score-grade-max{background:linear-gradient(100deg,#ff788d,#ffdc73,#a9ec8c,#77dffd,#b79bff);background-clip:text;-webkit-background-clip:text;color:transparent;text-shadow:none}
 .score-graph .score-grade-aaa{color:#ffd66e}
 .score-graph .score-grade-aa{color:#dfe7f4}
 .score-graph .score-grade-a{color:#b6eca9}
