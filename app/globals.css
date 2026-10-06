@@ -173,6 +173,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .score-graph-value{text-shadow:0 1px 3px var(--background)}
 .score-graph-value b,.score-graph-benchmark b{font-weight:700}
 .score-graph-benchmark{position:absolute;bottom:calc(var(--score-height) - 23px);left:50%;transform:translateX(-50%);z-index:1;font-size:11px;white-space:nowrap;color:#f8fbff;text-shadow:0 1px 3px #101a29,0 0 3px #101a29;pointer-events:none}
+/* Composite the shadow behind the clipped rainbow glyphs, preserving their fill. */
+.score-graph-value .score-grade-max{display:inline-block;filter:drop-shadow(0 1px 3px var(--background))}
+.score-graph-benchmark .score-grade-max{display:inline-block;filter:drop-shadow(0 1px 3px #101a29) drop-shadow(0 0 3px #101a29)}
+.app-update-count{white-space:nowrap}
 
 /* Options stay first; supplementary panels remember their expanded state. */
 .editor-additional{margin-top:16px;border-top:1px solid var(--border)}
