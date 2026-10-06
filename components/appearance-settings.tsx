@@ -1,13 +1,17 @@
 "use client";
-import {useEffect,useState} from 'react';
-import {Copy,Moon,Palette,RotateCcw} from 'lucide-react';
+import {useEffect,useRef,useState} from 'react';
+import {ChevronRight,Copy,Moon,Palette,RotateCcw,X} from 'lucide-react';
 import {Switch} from '@/components/ui/switch';
+import {Dialog,DialogTrigger,DialogContent,DialogTitle,DialogDescription,DialogClose} from '@/components/ui/dialog';
+import {seriesCode} from '@/lib/iidx-data';
 import {seriesTitleColor,seriesTitleOutline,seriesTitleStyle,seriesTitleGradient,seriesTitleGradientStyle,defaultOutlineColor,type SeriesColors,type SeriesOutlines,type SeriesGradients,type Theme} from '@/lib/appearance';
 import {TitleColorText} from './title-color-text';
 
 export function AppearanceSettings({theme,onTheme,enabled,onEnabled,colors,onColors,gradients,onGradients,outlines,onOutlines,onCopyTheme,seriesNames,disabled}:{theme:Theme;onTheme:(theme:Theme)=>void;enabled:boolean;onEnabled:(value:boolean)=>void;colors:SeriesColors;onColors:(colors:SeriesColors)=>void;gradients:SeriesGradients;onGradients:(gradients:SeriesGradients)=>void;outlines:SeriesOutlines;onOutlines:(outlines:SeriesOutlines)=>void;onCopyTheme:(series:number,from:Theme,to:Theme)=>void;seriesNames:Record<number,string>;disabled:boolean}){
  const entries=Object.entries(seriesNames).sort((a,b)=>Number(b[0])-Number(a[0]));
  const [selected,setSelected]=useState('');
+ const [listOpen,setListOpen]=useState(false);
+ const editorRef=useRef<HTMLLabelElement>(null),selectedFromList=useRef(false);
  const series=entries.some(([id])=>id===selected)?selected:entries[0]?.[0];
  const color=seriesTitleColor(Number(series),theme,colors);
  const outline=seriesTitleOutline(Number(series),theme,outlines);
@@ -22,7 +26,20 @@ export function AppearanceSettings({theme,onTheme,enabled,onEnabled,colors,onCol
   <label className="switch-line"><span><Moon size={16}/>ダークモード</span><Switch aria-label="ダークモード" checked={theme==='dark'} disabled={disabled} onCheckedChange={value=>onTheme(value?'dark':'light')}/></label>
   <label className="switch-line"><span>曲名をシリーズ別に色分け</span><Switch aria-label="曲名をシリーズ別に色分け" checked={enabled} disabled={disabled} onCheckedChange={onEnabled}/></label>
   {enabled&&series&&<div className="series-color-settings">
-   <label className="field-label" htmlFor="series-color-select">色を変更するシリーズ</label>
+   <Dialog open={listOpen} onOpenChange={setListOpen}>
+    <DialogTrigger asChild><button type="button" className="secondary-button series-colors-list-button" disabled={disabled} onClick={()=>{selectedFromList.current=false;}}><Palette size={16}/>シリーズカラーを一覧で確認</button></DialogTrigger>
+    <DialogContent className="series-colors-dialog" showCloseButton={false} onCloseAutoFocus={event=>{if(selectedFromList.current){event.preventDefault();selectedFromList.current=false;editorRef.current?.scrollIntoView({block:'center'});editorRef.current?.focus({preventScroll:true});}}}>
+     <div className="series-colors-dialog-heading"><DialogTitle>シリーズカラー一覧</DialogTitle><DialogClose asChild><button type="button" className="icon-button" aria-label="シリーズカラー一覧を閉じる"><X size={21}/></button></DialogClose></div>
+     <DialogDescription>{theme==='dark'?'ダーク':'ライト'}モードの設定です。シリーズを選ぶと色の編集に移ります。</DialogDescription>
+     <div className="series-colors-list">{entries.map(([id,name])=>{
+      const numericId=Number(id),rowStyle=seriesTitleStyle(numericId,theme,colors,true,outlines),rowGradient=seriesTitleGradient(numericId,theme,gradients),rowOutline=seriesTitleOutline(numericId,theme,outlines),top=seriesTitleColor(numericId,theme,colors);
+      return <button key={id} type="button" className={`series-colors-list-row ${id===series?'is-selected':''}`} aria-label={`${name}の色設定を編集`} aria-current={id===series?'true':undefined} disabled={disabled} onClick={()=>{selectedFromList.current=true;setSelected(id);setListOpen(false);}}>
+       <span className="series-colors-number">{seriesCode(numericId)}</span><span className="series-colors-row-main"><span className="series-colors-row-name" style={rowStyle}><TitleColorText text={name} style={rowStyle} gradientStyle={seriesTitleGradientStyle(numericId,theme,colors,gradients,true)}/></span><span className="series-colors-row-details"><span className="series-color-chip" role="img" aria-label={`${rowGradient.enabled?'上の色':'文字色'} ${top}`} style={{background:top}}/>{rowGradient.enabled&&<span className="series-color-chip" role="img" aria-label={`下の色 ${rowGradient.bottomColor}`} style={{background:rowGradient.bottomColor}}/>}<span>{rowGradient.enabled?`上下2色 · 位置${rowGradient.centerOffset>0?'+':''}${rowGradient.centerOffset}%`:'単色'}{rowOutline.enabled?' · 縁取り':''}{id===series?' · 選択中':''}</span></span></span><ChevronRight size={18}/>
+      </button>;
+     })}</div>
+    </DialogContent>
+   </Dialog>
+   <label ref={editorRef} tabIndex={-1} className="field-label" htmlFor="series-color-select">色を変更するシリーズ</label>
    <select id="series-color-select" className="choice" value={series} disabled={disabled} onChange={e=>setSelected(e.target.value)}>{entries.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select>
    <label className="switch-line"><span>上下2色のグラデーション</span><Switch aria-label="このシリーズの曲名を上下2色のグラデーションにする" checked={gradient.enabled} disabled={disabled} onCheckedChange={value=>updateGradient({enabled:value})}/></label>
    <div className="series-color-row"><label htmlFor="series-title-color">{gradient.enabled?'上の色':'曲名の色'} <small>（{theme==='dark'?'ダーク':'ライト'}）</small></label><input id="series-title-color" type="color" value={color} disabled={disabled} onInput={e=>onColors({...colors,[theme]:{...colors[theme],[series]:e.currentTarget.value}})} onChange={e=>onColors({...colors,[theme]:{...colors[theme],[series]:e.target.value}})}/><button type="button" className="secondary-button" disabled={disabled||!colors[theme][series]} onClick={()=>{const next={...colors[theme]};delete next[series];onColors({...colors,[theme]:next});}}><RotateCcw size={14}/>標準に戻す</button></div>
