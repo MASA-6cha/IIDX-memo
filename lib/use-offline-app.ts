@@ -1,5 +1,6 @@
 'use client';
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {createAppUpdateChecker} from './app-update-check';
 
 type OfflineState = 'checking' | 'saving' | 'ready' | 'error' | 'unavailable';
 type Receipt = {ready:boolean;savedAt?:string;error?:boolean};
@@ -31,6 +32,7 @@ export function useOfflineApp() {
   useEffect(() => {
     let alive = true;
     const cleanups:Array<()=>void> = [];
+    const checkAutomatically=createAppUpdateChecker({getRegistration:()=>registration.current,canCheck:()=>alive&&navigator.onLine&&document.visibilityState==='visible'&&!reloadRequested.current});
     const displayMode = window.matchMedia('(display-mode: standalone)');
     const setConnection = () => setOnline(navigator.onLine);
     const setDisplayMode = () => setStandalone(displayMode.matches || (navigator as Navigator & {standalone?:boolean}).standalone===true);
@@ -85,7 +87,7 @@ export function useOfflineApp() {
         watch(reg);
         if (reg.active) void readActive(reg);
         else setState('saving');
-        if (existing?.active && navigator.onLine) void reg.update().catch(()=>{});
+        if (existing?.active) void checkAutomatically();
       } catch {
         if (alive) {setState('error');setMessage('アプリ本体を保存できませんでした。通信・端末の空き容量を確認して再試行してください。');}
       }
@@ -101,6 +103,10 @@ export function useOfflineApp() {
       };
       navigator.serviceWorker.addEventListener('controllerchange',controllerChanged);
       cleanups.push(()=>navigator.serviceWorker.removeEventListener('controllerchange',controllerChanged));
+      const check=()=>{void checkAutomatically();};
+      window.addEventListener('focus',check);window.addEventListener('online',check);document.addEventListener('visibilitychange',check);
+      const interval=setInterval(check,5*60*1000);
+      cleanups.push(()=>{clearInterval(interval);window.removeEventListener('focus',check);window.removeEventListener('online',check);document.removeEventListener('visibilitychange',check);});
       void register();
     }
     return () => {alive=false;cleanups.forEach(cleanup=>cleanup());clearTimeout(applyingTimer.current);};
