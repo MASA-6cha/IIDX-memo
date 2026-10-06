@@ -179,6 +179,8 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .app-update-count{white-space:nowrap}
 .public-json-url{display:block;width:100%;max-width:100%;min-height:76px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-all;resize:none;overflow:hidden;box-sizing:border-box}
 .favorite-menu{position:relative}.favorite-menu h3{padding-right:36px}.favorite-close{position:absolute;top:8px;right:8px;width:36px;height:36px}
+.series-gradient-text{display:inline-grid;grid-template-columns:minmax(0,1fr);max-width:100%;vertical-align:baseline}.series-gradient-text>span{grid-area:1/1;min-width:0;overflow-wrap:inherit;word-break:inherit}.series-gradient-outline{pointer-events:none;user-select:none}
+.series-gradient-settings{margin:8px 0 16px}.series-gradient-position{display:flex;align-items:center;gap:10px}.series-gradient-position input[type=range]{flex:1;min-width:0;width:auto;padding:0;accent-color:var(--accent,#56d5bd)}.series-gradient-position input[type=number]{width:76px;flex:none;text-align:center}.series-gradient-position>span{font-size:13px;color:var(--light-muted,#b0c3df)}
 
 /* Options stay first; supplementary panels remember their expanded state. */
 .editor-additional{margin-top:16px;border-top:1px solid var(--border)}

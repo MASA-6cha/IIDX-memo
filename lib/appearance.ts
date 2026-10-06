@@ -8,6 +8,21 @@ const colors=z.record(seriesKey,hexColor);
 export const seriesColorsSchema=z.object({dark:colors.default({}),light:colors.default({})});
 export type SeriesColors=z.infer<typeof seriesColorsSchema>;
 export const initialSeriesColors=():SeriesColors=>({dark:{},light:{}});
+const gradients=z.record(seriesKey,z.object({enabled:z.boolean(),bottomColor:hexColor,centerOffset:z.number().int().min(-50).max(50)}));
+export const seriesGradientsSchema=z.object({dark:gradients.default({}),light:gradients.default({})});
+export type SeriesGradients=z.infer<typeof seriesGradientsSchema>;
+export const initialSeriesGradients=():SeriesGradients=>({dark:{},light:{}});
+export function seriesTitleGradient(series:number,theme:Theme,values:SeriesGradients){
+ return values[theme][String(series)]??{enabled:false,bottomColor:theme==='dark'?'#ffffff':'#18324f',centerOffset:0};
+}
+export function seriesTitleGradientStyle(series:number,theme:Theme,colors:SeriesColors,values:SeriesGradients,enabled:boolean):CSSProperties|undefined{
+ const gradient=seriesTitleGradient(series,theme,values);
+ if(!enabled||!gradient.enabled)return undefined;
+ const top=seriesTitleColor(series,theme,colors),bottom=gradient.bottomColor,center=Math.max(0,Math.min(100,50+gradient.centerOffset));
+ // A color hint moves the 50/50 mix while keeping the two endpoint colors.
+ const stops=center===0?`${bottom}, ${bottom}`:center===100?`${top}, ${top}`:`${top} 0%, ${center}%, ${bottom} 100%`;
+ return {backgroundImage:`linear-gradient(180deg, ${stops})`,backgroundClip:'text',WebkitBackgroundClip:'text',color:'transparent',textShadow:'none'};
+}
 const outlines=z.record(seriesKey,z.object({enabled:z.boolean(),color:hexColor}));
 export const seriesOutlinesSchema=z.object({dark:outlines.default({}),light:outlines.default({})});
 export type SeriesOutlines=z.infer<typeof seriesOutlinesSchema>;
@@ -39,10 +54,11 @@ export function seriesTitleStyle(series:number,theme:Theme,colors:SeriesColors,e
  return style;
 }
 
-export function copySeriesAppearance(series:number,from:Theme,to:Theme,colors:SeriesColors,outlines:SeriesOutlines){
+export function copySeriesAppearance(series:number,from:Theme,to:Theme,colors:SeriesColors,outlines:SeriesOutlines,gradients?:SeriesGradients){
  const key=String(series);
  return {
   seriesColors:{...colors,[to]:{...colors[to],[key]:seriesTitleColor(series,from,colors)}},
   seriesOutlines:{...outlines,[to]:{...outlines[to],[key]:{...seriesTitleOutline(series,from,outlines)}}},
+  ...(gradients?{seriesGradients:{...gradients,[to]:{...gradients[to],[key]:{...seriesTitleGradient(series,from,gradients)}}}}:{}),
  };
 }

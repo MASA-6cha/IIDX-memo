@@ -2,7 +2,7 @@ import {defaultScoreGraphColors,scoreGraphColorsSchema,type ScoreGraphColors} fr
 import {z} from 'zod';
 import {type OfficialFolderGrouping} from './difficulty-folders';
 import {type FolderSummaryMode} from './folder-summary';
-import {initialSeriesColors,seriesColorsSchema,initialSeriesOutlines,seriesOutlinesSchema,type SeriesColors,type SeriesOutlines,type Theme} from './appearance';
+import {initialSeriesGradients,seriesGradientsSchema,type SeriesGradients,initialSeriesColors,seriesColorsSchema,initialSeriesOutlines,seriesOutlinesSchema,type SeriesColors,type SeriesOutlines,type Theme} from './appearance';
 import {emptyRadarRanges,type ClearGauge,type DifficultyTable,type RadarRange} from './iidx-additional';
 import {type ScoreSource} from './play-history';
 import {type CpiGauge,type Chart,type Song,type ArcadeAvailability} from './iidx-data';
@@ -16,15 +16,15 @@ export function chartAvailability(chart:Chart,song:Song):ArcadeAvailability{
 }
 export type Filters={series:string;artist:string;levels:number[];availability:'all'|'available'|'removed';soflan:boolean;features:ChartFeature[]};
 export const defaultEditorSections=()=>({score:false,radar:false,chart:false});
-export type LibraryView={theme:Theme;seriesTitleColors:boolean;seriesColors:SeriesColors;seriesOutlines:SeriesOutlines;query:string;filters:Filters;difficulty:string;folder:string;savedOnly:boolean;sort:string;sortDirection:'asc'|'desc';table:DifficultyTable;gauge:ClearGauge;cpiGauge:CpiGauge;officialFolderGrouping:OfficialFolderGrouping;difficultyFolderMode:boolean;difficultyFolder:string|null;folderSummary:FolderSummaryMode;rank:string;radarRanges:RadarRange[];playStatus:string;showPlayData:boolean;playDisplay:PlayDisplay;scoreSource:ScoreSource;showTitleSource:boolean;showRadar:boolean;showUnofficial:boolean;radarMode:boolean;scoreGraphMode:boolean;scoreGraphColors:ScoreGraphColors;editorSections:ReturnType<typeof defaultEditorSections>};
+export type LibraryView={theme:Theme;seriesTitleColors:boolean;seriesColors:SeriesColors;seriesGradients:SeriesGradients;seriesOutlines:SeriesOutlines;query:string;filters:Filters;difficulty:string;folder:string;savedOnly:boolean;sort:string;sortDirection:'asc'|'desc';table:DifficultyTable;gauge:ClearGauge;cpiGauge:CpiGauge;officialFolderGrouping:OfficialFolderGrouping;difficultyFolderMode:boolean;difficultyFolder:string|null;folderSummary:FolderSummaryMode;rank:string;radarRanges:RadarRange[];playStatus:string;showPlayData:boolean;playDisplay:PlayDisplay;scoreSource:ScoreSource;showTitleSource:boolean;showRadar:boolean;showUnofficial:boolean;radarMode:boolean;scoreGraphMode:boolean;scoreGraphColors:ScoreGraphColors;editorSections:ReturnType<typeof defaultEditorSections>};
 export const defaultFilters=():Filters=>({series:'all',artist:'',levels:[],availability:'available',soflan:false,features:[]});
 export const toggleDifficultyLevel=(levels:number[],level:number)=>levels.includes(level)?levels.filter(value=>value!==level):[...levels,level].sort((a,b)=>a-b);
 export const matchesDifficultyLevels=(level:number,levels:number[])=>levels.length===0||levels.includes(level);
 export const libraryViewKey='iidx-option-notes:library-view:v1';
-export const initialLibraryView=():LibraryView=>({theme:'dark',seriesTitleColors:true,seriesColors:initialSeriesColors(),seriesOutlines:initialSeriesOutlines(),query:'',filters:defaultFilters(),difficulty:'ANOTHER',folder:'all',savedOnly:false,sort:'catalog',sortDirection:'asc',table:'official',gauge:'hard',cpiGauge:'hard',officialFolderGrouping:'level',difficultyFolderMode:true,difficultyFolder:null,folderSummary:'both',rank:'all',radarRanges:emptyRadarRanges(),playStatus:'all',showPlayData:true,playDisplay:initialPlayDisplay(),scoreSource:'latest',showTitleSource:false,showRadar:true,showUnofficial:true,radarMode:false,scoreGraphMode:false,scoreGraphColors:defaultScoreGraphColors(),editorSections:defaultEditorSections()});
+export const initialLibraryView=():LibraryView=>({theme:'dark',seriesTitleColors:true,seriesColors:initialSeriesColors(),seriesGradients:initialSeriesGradients(),seriesOutlines:initialSeriesOutlines(),query:'',filters:defaultFilters(),difficulty:'ANOTHER',folder:'all',savedOnly:false,sort:'catalog',sortDirection:'asc',table:'official',gauge:'hard',cpiGauge:'hard',officialFolderGrouping:'level',difficultyFolderMode:true,difficultyFolder:null,folderSummary:'both',rank:'all',radarRanges:emptyRadarRanges(),playStatus:'all',showPlayData:true,playDisplay:initialPlayDisplay(),scoreSource:'latest',showTitleSource:false,showRadar:true,showUnofficial:true,radarMode:false,scoreGraphMode:false,scoreGraphColors:defaultScoreGraphColors(),editorSections:defaultEditorSections()});
 
 export const libraryViewSchema=z.object({
-  theme:z.enum(['dark','light']).default('dark'),seriesTitleColors:z.boolean().default(true),seriesColors:seriesColorsSchema.default(initialSeriesColors),seriesOutlines:seriesOutlinesSchema.default(initialSeriesOutlines),
+  theme:z.enum(['dark','light']).default('dark'),seriesTitleColors:z.boolean().default(true),seriesColors:seriesColorsSchema.default(initialSeriesColors),seriesGradients:seriesGradientsSchema.default(initialSeriesGradients),seriesOutlines:seriesOutlinesSchema.default(initialSeriesOutlines),
   query:z.string(),
   filters:z.object({
    series:z.string().regex(/^(all|-1|1\.5|[1-9]\d*)$/),artist:z.string(),

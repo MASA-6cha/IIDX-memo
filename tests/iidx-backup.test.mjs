@@ -45,6 +45,7 @@ const {serializeLibraryView,parseLibraryView}=await loadSource('../lib/iidx-view
 const customView=()=>({
  ...initialLibraryView(),theme:'light',seriesTitleColors:false,editorSections:{score:true,radar:true,chart:false},
  seriesColors:{dark:{'1.5':'#aAbBcC','33':'#123456'},light:{'-1':'#112233','33':'#fedcba'}},
+ seriesGradients:{dark:{'33':{enabled:true,bottomColor:'#abcdef',centerOffset:-25}},light:{'33':{enabled:false,bottomColor:'#123456',centerOffset:30}}},
  seriesOutlines:{dark:{'33':{enabled:true,color:'#987654'}},light:{'33':{enabled:false,color:'#ABCDEF'}}},
  query:'移行テスト',filters:{series:'33',artist:'artist',levels:[10,12],availability:'removed',soflan:true,features:['CN','MSS']},
  difficulty:'LEGGENDARIA',folder:'fav3',savedOnly:true,sort:'title',sortDirection:'desc',table:'cpi',gauge:'normal',cpiGauge:'exh',
@@ -66,6 +67,15 @@ test('Legacy backups restore notes without resetting destination appearance or f
  const backup=parseBackup(JSON.stringify(raw));let writes=0,viewWrites=0;
  await restoreBackupData(backup,customView(),async()=>{writes++;},()=>{viewWrites++;});
  assert.equal(writes,1);assert.equal(viewWrites,0);
+});
+
+test('Older v2 backups without gradients retain existing colors, outlines and filters',()=>{
+ const raw=JSON.parse(makeBackup(initialState(),customView()));delete raw.view.seriesGradients;
+ const restored=parseBackup(JSON.stringify(raw));
+ assert.deepEqual(restored.view,{...customView(),seriesGradients:{dark:{},light:{}}});
+ for(const entry of [{enabled:true,bottomColor:'red',centerOffset:0},{enabled:true,bottomColor:'#abcdef',centerOffset:51}]){
+  raw.view.seriesGradients={dark:{33:entry},light:{}};assert.throws(()=>parseBackup(JSON.stringify(raw)));
+ }
 });
 
 test('Malformed settings or a missing v2 settings object are rejected before restore',()=>{
