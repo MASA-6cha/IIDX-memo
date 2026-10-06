@@ -21,7 +21,8 @@ export function seriesTitleGradientStyle(series:number,theme:Theme,colors:Series
  const top=seriesTitleColor(series,theme,colors),bottom=gradient.bottomColor,center=Math.max(0,Math.min(100,50+gradient.centerOffset));
  // A color hint moves the 50/50 mix while keeping the two endpoint colors.
  const stops=center===0?`${bottom}, ${bottom}`:center===100?`${top}, ${top}`:`${top} 0%, ${center}%, ${bottom} 100%`;
- return {backgroundImage:`linear-gradient(180deg, ${stops})`,backgroundClip:'text',WebkitBackgroundClip:'text',color:'transparent',textShadow:'none'};
+ // Repeat at the current line height so every wrapped line has the same colors.
+ return {backgroundImage:`linear-gradient(180deg, ${stops})`,backgroundSize:'100% 1lh',backgroundRepeat:'repeat-y',backgroundPosition:'left top',backgroundClip:'text',WebkitBackgroundClip:'text',color:'transparent',textShadow:'none'};
 }
 const outlines=z.record(seriesKey,z.object({enabled:z.boolean(),color:hexColor}));
 export const seriesOutlinesSchema=z.object({dark:outlines.default({}),light:outlines.default({})});
