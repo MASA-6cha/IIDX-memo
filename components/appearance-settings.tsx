@@ -24,8 +24,8 @@ export function AppearanceSettings({editorCloseOnLeft,onEditorCloseOnLeft,theme,
  return <section className="appearance-settings">
   <h3><Palette size={17}/>画面の表示</h3>
   <label className="switch-line"><span><Moon size={16}/>ダークモード</span><Switch aria-label="ダークモード" checked={theme==='dark'} disabled={disabled} onCheckedChange={value=>onTheme(value?'dark':'light')}/></label>
-  <label className="switch-line"><span>閉じる・上部ボタンを左に配置</span><Switch aria-label="閉じる・上部ボタンを左に配置" checked={editorCloseOnLeft} disabled={disabled} onCheckedChange={onEditorCloseOnLeft}/></label>
-  <p className="editor-close-position-help">iPhone Duoなどでカメラ・時計・電波表示と重なる場合にオン。画面の向きにかかわらず、曲明細・全体設定の閉じるボタンと、メイン画面の上部ボタンを左に寄せます。右上に余白を確保し、狭い画面ではタイトルと操作を2段にまとめます。</p>
+  <label className="switch-line"><span>カメラ・時計を避けてボタンを配置</span><Switch aria-label="カメラ・時計を避けてボタンを配置" checked={editorCloseOnLeft} disabled={disabled} onCheckedChange={onEditorCloseOnLeft}/></label>
+  <p className="editor-close-position-help">iPhone Duoなどでカメラ・時計・電波表示と重なる場合にオン。メイン画面の上部ボタンと全体設定の閉じるボタンを左に寄せ、右上に余白を確保します。曲明細の閉じる・保存は、この設定にかかわらず上部中央に表示します。</p>
   <label className="switch-line"><span>曲名をシリーズ別に色分け</span><Switch aria-label="曲名をシリーズ別に色分け" checked={enabled} disabled={disabled} onCheckedChange={onEnabled}/></label>
   {enabled&&series&&<div className="series-color-settings">
    <Dialog open={listOpen} onOpenChange={setListOpen}>

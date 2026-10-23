@@ -286,3 +286,16 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .editor.editor-close-left>.editor-scroll{padding-top:10px!important}
 .editor-close-left .common-number-editor-help{margin:0 0 8px}
 @media(orientation:landscape) and (max-height:600px){.editor.editor-close-left>.editor-song>.editor-meta{margin-top:0}}
+
+/* Keep close and save together in the center; the editor no longer has a bottom action pane. */
+.editor>.editor-top,.editor.editor-close-left>.editor-top{position:sticky;top:0;z-index:3;display:grid;grid-template-columns:minmax(0,1fr);justify-content:stretch;gap:3px;padding:4px 18px!important;background:var(--light-surface,#181f2c)}
+.editor .editor-actions{display:flex;justify-content:center;align-items:center;gap:8px;min-width:0}
+.editor .editor-actions>.editor-close-button{width:auto;min-width:88px;height:44px;min-height:44px;padding:0 10px;gap:4px;border-color:var(--light-line,#40506a);font-size:14px}
+.editor .editor-actions>.editor-close-button>.editor-close-label{display:inline}
+.editor .editor-actions>.editor-save-button{width:auto;min-width:120px;height:44px;min-height:44px;padding:5px 10px;gap:6px;font-size:14px;white-space:nowrap}
+.editor .editor-heading-status{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:2px 12px;min-width:0}
+.editor .editor-heading-status>.eyebrow{font-size:10px;letter-spacing:.8px;line-height:18px;white-space:nowrap}
+.editor .editor-heading-status>.save-state{justify-content:center;flex-wrap:wrap;min-width:0;min-height:18px;margin:0;gap:2px 6px;font-size:11px;line-height:18px}
+.editor .editor-heading-status>.save-state time{margin-left:0;font-size:11px;white-space:nowrap}
+.editor>.editor-top>.save-error{margin:2px 0 0;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.editor>.editor-scroll{padding-bottom:max(14px,env(safe-area-inset-bottom))!important}
