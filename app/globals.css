@@ -275,3 +275,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   .app-shell.top-controls-left{padding-top:calc(108px + env(safe-area-inset-top))}
  }
 }
+
+/* Left-positioned controls can use the clear top-left area instead of a full-width status inset. */
+.editor-sheet.editor-sheet-left-controls{padding-top:6px!important}
+.editor.editor-close-left>.editor-top{padding:1px 18px!important}
+.editor.editor-close-left>.editor-song{padding-bottom:4px!important}
+.editor.editor-close-left>.editor-song h2{margin-top:2px!important;margin-bottom:2px!important}
+.editor.editor-close-left>.editor-song>.editor-meta{margin-top:4px}
+.editor.editor-close-left>.editor-switches{padding:4px 18px}
+.editor.editor-close-left>.editor-scroll{padding-top:10px!important}
+.editor-close-left .common-number-editor-help{margin:0 0 8px}
+@media(orientation:landscape) and (max-height:600px){.editor.editor-close-left>.editor-song>.editor-meta{margin-top:0}}
