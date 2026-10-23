@@ -7,7 +7,7 @@ import {seriesCode} from '@/lib/iidx-data';
 import {seriesTitleColor,seriesTitleOutline,seriesTitleStyle,seriesTitleGradient,seriesTitleGradientStyle,defaultOutlineColor,type SeriesColors,type SeriesOutlines,type SeriesGradients,type Theme} from '@/lib/appearance';
 import {TitleColorText} from './title-color-text';
 
-export function AppearanceSettings({theme,onTheme,enabled,onEnabled,colors,onColors,gradients,onGradients,outlines,onOutlines,onCopyTheme,seriesNames,disabled}:{theme:Theme;onTheme:(theme:Theme)=>void;enabled:boolean;onEnabled:(value:boolean)=>void;colors:SeriesColors;onColors:(colors:SeriesColors)=>void;gradients:SeriesGradients;onGradients:(gradients:SeriesGradients)=>void;outlines:SeriesOutlines;onOutlines:(outlines:SeriesOutlines)=>void;onCopyTheme:(series:number,from:Theme,to:Theme)=>void;seriesNames:Record<number,string>;disabled:boolean}){
+export function AppearanceSettings({editorCloseOnLeft,onEditorCloseOnLeft,theme,onTheme,enabled,onEnabled,colors,onColors,gradients,onGradients,outlines,onOutlines,onCopyTheme,seriesNames,disabled}: {editorCloseOnLeft:boolean;onEditorCloseOnLeft:(value:boolean)=>void;theme:Theme;onTheme:(theme:Theme)=>void;enabled:boolean;onEnabled:(value:boolean)=>void;colors:SeriesColors;onColors:(colors:SeriesColors)=>void;gradients:SeriesGradients;onGradients:(gradients:SeriesGradients)=>void;outlines:SeriesOutlines;onOutlines:(outlines:SeriesOutlines)=>void;onCopyTheme:(series:number,from:Theme,to:Theme)=>void;seriesNames:Record<number,string>;disabled:boolean}){
  const entries=Object.entries(seriesNames).sort((a,b)=>Number(b[0])-Number(a[0]));
  const [selected,setSelected]=useState('');
  const [listOpen,setListOpen]=useState(false);
@@ -24,6 +24,8 @@ export function AppearanceSettings({theme,onTheme,enabled,onEnabled,colors,onCol
  return <section className="appearance-settings">
   <h3><Palette size={17}/>画面の表示</h3>
   <label className="switch-line"><span><Moon size={16}/>ダークモード</span><Switch aria-label="ダークモード" checked={theme==='dark'} disabled={disabled} onCheckedChange={value=>onTheme(value?'dark':'light')}/></label>
+  <label className="switch-line"><span>縦向きの曲明細で閉じるボタンを左に配置</span><Switch aria-label="縦向きの曲明細で閉じるボタンを左に配置" checked={editorCloseOnLeft} disabled={disabled} onCheckedChange={onEditorCloseOnLeft}/></label>
+  <p className="editor-close-position-help">iPhone Duoの外画面など、右上のカメラ領域にボタンが重なる場合にオン。幅の狭い縦画面で「× 閉じる」を左に表示します。横向きや広い画面では通常の配置です。</p>
   <label className="switch-line"><span>曲名をシリーズ別に色分け</span><Switch aria-label="曲名をシリーズ別に色分け" checked={enabled} disabled={disabled} onCheckedChange={onEnabled}/></label>
   {enabled&&series&&<div className="series-color-settings">
    <Dialog open={listOpen} onOpenChange={setListOpen}>
