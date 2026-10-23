@@ -231,4 +231,47 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .editor .dp-common .choice [data-slot=select-value]{display:block;-webkit-line-clamp:unset;white-space:normal;overflow-wrap:anywhere;text-align:left}
 
 .editor-close-label{display:none}.editor-close-position-help{font-size:12px;line-height:1.7;color:var(--light-muted,#a8b7cf);margin:0 0 16px}
-@media(max-width:760px) and (orientation:portrait){.editor-close-left>.editor-top{justify-content:flex-start;gap:12px}.editor-close-left>.editor-top>.editor-close-button{order:-1;width:auto;min-width:88px;min-height:44px;height:44px;padding:0 10px;gap:4px;border-color:var(--light-line,#40506a);font-size:14px}.editor-close-left>.editor-top>.editor-close-button>.editor-close-label{display:inline}}
+.editor-close-left>.editor-top{justify-content:flex-start;gap:12px}.editor-close-left>.editor-top>.editor-close-button{order:-1;width:auto;min-width:88px;min-height:44px;height:44px;padding:0 10px;gap:4px;border-color:var(--light-line,#40506a);font-size:14px}.editor-close-left>.editor-top>.editor-close-button>.editor-close-label{display:inline}
+
+/* Keep table selection and list/folder controls on one row. */
+.difficulty-selection{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px 10px;margin:0 0 14px}
+.difficulty-selection>.difficulty-table-bar{display:contents}
+.difficulty-selection>.difficulty-table-bar>label:first-child{grid-column:1;grid-row:1;min-width:0}
+.difficulty-selection>.difficulty-table-bar>label:first-child>span{line-height:20px;margin-bottom:6px}
+.difficulty-selection .choice{min-width:0;white-space:nowrap}
+.difficulty-selection .choice [data-slot=select-value]{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.difficulty-selection>.difficulty-view-bar{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;gap:6px;margin:0;min-width:0}
+.difficulty-selection>.difficulty-view-bar>span{order:-1;line-height:20px;text-align:right;white-space:nowrap}
+.difficulty-selection .difficulty-view-bar [data-slot=tabs-list]{height:44px!important;width:100%}
+.difficulty-selection .difficulty-view-bar [data-slot=tabs-trigger]{min-width:64px;padding:4px 7px;font-size:13px}
+.difficulty-selection>.difficulty-table-bar>label:nth-child(2){grid-column:1/-1;grid-row:2;display:flex;align-items:center;gap:8px;min-width:0}
+.difficulty-selection>.difficulty-table-bar>label:nth-child(2)>span{margin:0;white-space:nowrap}
+.difficulty-selection>.difficulty-table-bar>label:nth-child(2)>.choice{width:160px;max-width:calc(100% - 80px);min-height:40px}
+/* A compact editor footer keeps status and save action visible together. */
+.editor>.save-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;padding:5px 18px max(5px,env(safe-area-inset-bottom))!important}
+.editor>.save-bar>.save-state{min-width:0;margin:0;flex-wrap:wrap;gap:2px 6px;font-size:12px;line-height:18px}
+.editor>.save-bar>.save-state time{margin-left:0;white-space:nowrap}
+.editor>.save-bar>.save-button{width:auto;min-width:0;min-height:44px;height:44px;padding:5px 12px;gap:6px;font-size:14px;white-space:nowrap}
+.editor>.save-bar>.save-error{grid-column:1/-1;width:auto;margin:0;min-width:0;overflow-wrap:anywhere}
+.settings-close-label{display:none}
+
+ .settings-close-left>.sheet-heading{justify-content:flex-start}
+ .settings-close-left>.sheet-heading>.settings-close-button{order:-1;width:auto;min-width:88px;min-height:44px;height:44px;padding:0 10px;gap:4px;border-color:var(--light-line,#40506a);font-size:14px}
+ .settings-close-left>.sheet-heading>.settings-close-button>.settings-close-label{display:inline}
+
+
+/* The opt-in layout reserves the top-right status area in every orientation. */
+.top-controls-left>.app-header{justify-content:flex-start;gap:12px;padding-right:max(clamp(80px,10vw,120px),env(safe-area-inset-right))}
+.top-controls-left>.app-header>.brand{flex-shrink:0}
+.top-controls-left>.app-header>.header-right{justify-content:flex-start;gap:6px;margin-right:auto}
+.top-controls-left>.app-header .prototype-badge,.top-controls-left>.app-header .storage-pill{display:none}
+@media(max-width:600px){
+ .top-controls-left>.app-header{display:grid;grid-template-columns:minmax(0,1fr);align-content:center;justify-items:start;gap:4px;height:calc(88px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top);padding-bottom:6px}
+ .app-shell.top-controls-left{padding-top:calc(88px + env(safe-area-inset-top))}
+}
+@supports (-webkit-touch-callout:none){
+ @media (display-mode:standalone) and (max-width:600px){
+  .top-controls-left>.app-header{height:calc(108px + env(safe-area-inset-top));padding-top:calc(20px + env(safe-area-inset-top))}
+  .app-shell.top-controls-left{padding-top:calc(108px + env(safe-area-inset-top))}
+ }
+}
