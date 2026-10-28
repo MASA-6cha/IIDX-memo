@@ -1,5 +1,6 @@
 /* Build-time placeholders are replaced by build-offline.mjs. */
 const BUILD = '__IIDX_BUILD__';
+const RELEASE = /* __IIDX_RELEASE__ */ null;
 const ASSETS = /* __IIDX_ASSETS__ */ [];
 const PREFIX = 'iidx-app-';
 const CACHE = PREFIX + BUILD;
@@ -105,6 +106,7 @@ self.addEventListener('fetch', event => {
 
 self.addEventListener('message', event => {
   const reply = result => event.ports[0]?.postMessage(result);
+  if (event.data?.type === 'IIDX_RELEASE_INFO') reply({ready:true,release:RELEASE});
   if (event.data?.type === 'IIDX_OFFLINE_STATUS') event.waitUntil(offlineStatus().then(reply).catch(() => reply({ready: false})));
   if (event.data?.type === 'IIDX_REPAIR_OFFLINE') event.waitUntil(saveOffline().then(offlineStatus).then(reply).catch(() => reply({ready: false, error: true})));
   if (event.data?.type === 'IIDX_APPLY_UPDATE') event.waitUntil(offlineStatus().then(status => {

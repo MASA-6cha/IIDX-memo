@@ -2,8 +2,10 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {createAppUpdateChecker} from './app-update-check';
 
+import {parseAppRelease,type AppRelease} from './app-release';
+
 type OfflineState = 'checking' | 'saving' | 'ready' | 'error' | 'unavailable';
-type Receipt = {ready:boolean;savedAt?:string;error?:boolean};
+type Receipt = {ready:boolean;savedAt?:string;error?:boolean;release?:unknown};
 
 function askWorker(worker:ServiceWorker, type:string, timeout=10000):Promise<Receipt> {
   return new Promise((resolve,reject) => {
@@ -21,6 +23,7 @@ export function useOfflineApp() {
   const [standalone,setStandalone] = useState(false);
   const [displayModeReady,setDisplayModeReady] = useState(false);
   const [savedAt,setSavedAt] = useState('');
+  const [updateRelease,setUpdateRelease] = useState<AppRelease|null>(null);
   const [updateAvailable,setUpdateAvailable] = useState(false);
   const [checkingUpdate,setCheckingUpdate] = useState(false);
   const [message,setMessage] = useState('');
@@ -40,6 +43,10 @@ export function useOfflineApp() {
     window.addEventListener('online',setConnection);window.addEventListener('offline',setConnection);
     displayMode.addEventListener('change',setDisplayMode);
     cleanups.push(()=>{window.removeEventListener('online',setConnection);window.removeEventListener('offline',setConnection);displayMode.removeEventListener('change',setDisplayMode);});
+    const readRelease = async(worker:ServiceWorker|null) => {
+      setUpdateRelease(null);if(!worker)return;
+      try{const receipt=await askWorker(worker,'IIDX_RELEASE_INFO',3000);if(alive&&registration.current?.waiting===worker)setUpdateRelease(parseAppRelease(receipt.release));}catch{/* Older releases may not supply release notes. */}
+    };
 
     const readActive = async(reg:ServiceWorkerRegistration) => {
       if (!reg.active) return;
@@ -60,7 +67,7 @@ export function useOfflineApp() {
         if (!alive) return;
         if (worker.state==='installed') {
           setCheckingUpdate(false);
-          if (reg.active) {setUpdateAvailable(true);setMessage('新しいアプリを保存しました。編集を終えてから更新できます。');}
+          if (reg.active) {void readRelease(reg.waiting??worker);setUpdateAvailable(true);setMessage('新しいアプリを保存しました。編集を終えてから更新できます。');}
         }
         if (worker.state==='activated') void readActive(reg);
         if (worker.state==='redundant') {
@@ -80,7 +87,7 @@ export function useOfflineApp() {
         const reg = existing?.active ? existing : await navigator.serviceWorker.register(`${base}sw.js`,{scope:base,updateViaCache:'none'});
         if (!alive) return;
         registration.current=reg;
-        setUpdateAvailable(!!reg.waiting);
+        setUpdateAvailable(!!reg.waiting);void readRelease(reg.waiting);
         const found = () => watch(reg);
         reg.addEventListener('updatefound',found);
         cleanups.push(()=>reg.removeEventListener('updatefound',found));
@@ -146,7 +153,7 @@ export function useOfflineApp() {
     },15000);
   },[]);
 
-  return {state,online,standalone,displayModeReady,savedAt,updateAvailable,checkingUpdate,message,retry,checkUpdate,applyUpdate};
+  return {state,online,standalone,displayModeReady,savedAt,updateAvailable,updateRelease,checkingUpdate,message,retry,checkUpdate,applyUpdate};
 }
 
 export type OfflineApp = ReturnType<typeof useOfflineApp>;

@@ -21,7 +21,7 @@ export async function readLibrary():Promise<{state:AppState;catalog:Catalog|null
   const stateRequest=store.get('state'),catalogRequest=store.get('catalog');
   t.oncomplete=()=>{
    const state=stateRequest.result??initialState(),catalog=catalogRequest.result??null;
-   if(state.schemaVersion!==1||!state.notes||!Array.isArray(state.folders)||state.folders.length!==5){reject(new Error('保存データを読み込めませんでした。'));return;}
+   if(state.schemaVersion!==1||!state.notes||!Array.isArray(state.folders)||state.folders.length<1||state.folders.length>100){reject(new Error('保存データを読み込めませんでした。'));return;}
    if(state.songIdentities&&!identityStateSchema.safeParse(state.songIdentities).success){reject(new Error('曲IDの対応情報を読み込めませんでした。'));return;}
    if(state.playData&&!playDataSchema.safeParse(state.playData).success){reject(new Error('プレイデータを読み込めませんでした。'));return;}
    if(state.liftVisibility&&(typeof state.liftVisibility.SP!=='boolean'||typeof state.liftVisibility.DP!=='boolean')){reject(new Error('LIFTの表示設定を読み込めませんでした。'));return;}

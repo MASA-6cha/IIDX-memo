@@ -1,4 +1,5 @@
 import {Check,Download,RefreshCw,Smartphone,WifiOff} from 'lucide-react';
+import {UpdateChanges} from '@/components/update-changes';
 import type {OfflineApp} from '@/lib/use-offline-app';
 
 export function OfflineStatus({offline,hasCatalog,onOpen}:{offline:OfflineApp;hasCatalog:boolean;onOpen:()=>void}) {
@@ -18,6 +19,7 @@ export function OfflineSettings({offline,hasCatalog,storageReady,disabled,dirty,
     {offline.savedAt&&<p>本体の保存：{new Date(offline.savedAt).toLocaleString('ja-JP')}</p>}
     {offline.state==='error'&&<button className="secondary-button" disabled={disabled||!offline.online} onClick={()=>void offline.retry()}><Download size={16}/>アプリ本体を保存し直す</button>}
     {(offline.state==='ready'||offline.updateAvailable)&&<div className="offline-actions"><button className="secondary-button" disabled={disabled||!offline.online||offline.checkingUpdate} onClick={()=>void offline.checkUpdate()}><RefreshCw size={16} className={offline.checkingUpdate?'spin':''}/>{offline.checkingUpdate?'更新を確認中…':'アプリの更新を確認'}</button>{offline.updateAvailable&&<button className="save-button" disabled={disabled} onClick={onApplyUpdate}>新しいアプリに切り替える</button>}</div>}
+    {offline.updateAvailable&&<UpdateChanges release={offline.updateRelease}/>}
     {offline.message&&<p className={offline.state==='error'?'transfer-error':'offline-message'} role="status">{offline.message}</p>}
     {dirty&&offline.updateAvailable&&<p>切り替え前に、編集中の設定を保存するか確認します。</p>}
     <InstallSteps/>

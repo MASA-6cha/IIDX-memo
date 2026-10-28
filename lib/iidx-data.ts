@@ -62,7 +62,7 @@ export function commonComment(n:Note):string{
 }
 export const commonDisplay=(n:Note):DisplaySettings=>n.display??displayFromSide(n.left);
 export const hasLegacyDisplayConflict=(n:Note)=>!n.display&&JSON.stringify(displayFromSide(n.left))!==JSON.stringify(displayFromSide(n.right));
-export interface Folder{id:string;name:string;color:string;songIds:string[]}
+export interface Folder{id:string;name:string;color:string;songIds:string[];chartIds?:string[]}
 export type NumberSettings=Pick<DisplaySettings,'green'|'whiteTop'|'whiteBottom'>;
 export type NumberProfile='SP:1P'|'SP:2P'|'DP';
 export interface AppState{songIdentities?:SongIdentities;liftVisibility?:{SP:boolean;DP:boolean};commonNumbers?:Partial<Record<NumberProfile,NumberSettings>>;schemaVersion:1;preferences:{mode:Mode;spSide:Side};notes:Record<string,Note>;folders:Folder[];playData?:PlayData;manualCharts?:Record<string,ManualChartData>}

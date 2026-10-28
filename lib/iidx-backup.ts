@@ -27,9 +27,10 @@ const stateSchema=z.object({
  notes:z.record(z.string().regex(noteId),noteSchema),
  liftVisibility:z.object({SP:z.boolean(),DP:z.boolean()}).strict().optional(),commonNumbers:commonNumbersSchema.optional(),playData:playDataSchema.optional(),manualCharts:manualChartsSchema.optional(),
  folders:z.array(z.object({
-  id:z.enum(['fav1','fav2','fav3','fav4','fav5']),name:z.string().min(1).max(20).refine(v=>!!v.trim()),
+  id:z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/),name:z.string().min(1).max(20).refine(v=>!!v.trim()),
   color:z.string().regex(/^#[0-9a-fA-F]{6}$/),songIds:z.array(z.string().min(1).max(160)).max(50000).refine(v=>new Set(v).size===v.length),
- }).strict()).length(5).refine(f=>new Set(f.map(x=>x.id)).size===5),
+  chartIds:z.array(z.string().regex(/^[^:\s]{1,160}:(?:SP|DP):(?:BEGINNER|NORMAL|HYPER|ANOTHER|LEGGENDARIA)$/)).max(50000).refine(v=>new Set(v).size===v.length).optional(),
+ }).strict()).min(1).max(100).refine(f=>new Set(f.map(x=>x.id)).size===f.length),
 }).strict();
 const legacyBackupSchema=z.object({format:z.literal('iidx-option-notes'),version:z.literal(1),exportedAt:dateSchema,data:stateSchema}).strict();
 const backupSchema=z.discriminatedUnion('version',[legacyBackupSchema,legacyBackupSchema.extend({version:z.literal(2),view:libraryViewSchema}).strict()]);
@@ -54,7 +55,7 @@ export function parseBackup(text:string):Backup{
 
 export function backupCounts(state:AppState){
  const keys=Object.keys(state.notes);
- return {manualCharts:Object.keys(state.manualCharts??{}).length,total:keys.length,sp1:keys.filter(k=>k.endsWith(':1P')).length,sp2:keys.filter(k=>k.endsWith(':2P')).length,dp:keys.filter(k=>k.includes(':DP:')).length,favorites:state.folders.reduce((n,f)=>n+f.songIds.length,0),scores:Object.keys(collectPlayHistory(state.playData)).length};
+ return {manualCharts:Object.keys(state.manualCharts??{}).length,total:keys.length,sp1:keys.filter(k=>k.endsWith(':1P')).length,sp2:keys.filter(k=>k.endsWith(':2P')).length,dp:keys.filter(k=>k.includes(':DP:')).length,favorites:state.folders.reduce((n,f)=>n+f.songIds.length+(f.chartIds?.length??0),0),scores:Object.keys(collectPlayHistory(state.playData)).length};
 }
 
 // Write settings first; if the IndexedDB transaction fails, restore the previous settings.
