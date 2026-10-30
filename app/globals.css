@@ -280,13 +280,13 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* Left-positioned controls can use the clear top-left area instead of a full-width status inset. */
 .editor-sheet.editor-sheet-left-controls{padding-top:6px!important}
 .editor.editor-close-left>.editor-top{padding:1px 18px!important}
-.editor.editor-close-left>.editor-song{padding-bottom:4px!important}
-.editor.editor-close-left>.editor-song h2{margin-top:2px!important;margin-bottom:2px!important}
-.editor.editor-close-left>.editor-song>.editor-meta{margin-top:4px}
-.editor.editor-close-left>.editor-switches{padding:4px 18px}
-.editor.editor-close-left>.editor-scroll{padding-top:10px!important}
+.editor.editor-close-left>.editor-body>.editor-song{padding-bottom:4px!important}
+.editor.editor-close-left>.editor-body>.editor-song h2{margin-top:2px!important;margin-bottom:2px!important}
+.editor.editor-close-left>.editor-body>.editor-song>.editor-meta{margin-top:4px}
+.editor.editor-close-left>.editor-body>.editor-switches{padding:4px 18px}
+.editor.editor-close-left>.editor-body>.editor-scroll{padding-top:10px!important}
 .editor-close-left .common-number-editor-help{margin:0 0 8px}
-@media(orientation:landscape) and (max-height:600px){.editor.editor-close-left>.editor-song>.editor-meta{margin-top:0}}
+@media(orientation:landscape) and (max-height:600px){.editor.editor-close-left>.editor-body>.editor-song>.editor-meta{margin-top:0}}
 
 /* Keep close and save together in the center; the editor no longer has a bottom action pane. */
 .editor>.editor-top,.editor.editor-close-left>.editor-top{position:sticky;top:0;z-index:3;display:grid;grid-template-columns:minmax(0,1fr);justify-content:stretch;gap:3px;padding:4px 18px!important;background:var(--light-surface,#181f2c)}
@@ -299,6 +299,19 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .editor .editor-heading-status>.save-state{justify-content:center;flex-wrap:wrap;min-width:0;min-height:18px;margin:0;gap:2px 6px;font-size:11px;line-height:18px}
 .editor .editor-heading-status>.save-state time{margin-left:0;font-size:11px;white-space:nowrap}
 .editor>.editor-top>.save-error{margin:2px 0 0;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
-.editor>.editor-scroll{padding-bottom:max(14px,env(safe-area-inset-bottom))!important}
+.editor>.editor-body>.editor-scroll{padding-bottom:max(14px,env(safe-area-inset-bottom))!important}
 
 .favorite-menu{max-height:calc(100dvh - 32px);overflow-y:auto}.favorite-scope{display:flex;gap:6px;margin:10px 0}.favorite-scope button{flex:1;min-height:40px;border:1px solid var(--border);border-radius:6px;background:var(--muted);color:var(--foreground)}.favorite-scope button[aria-pressed=true]{border-color:var(--primary);color:var(--primary);background:var(--accent)}.favorite-folder-list{max-height:35dvh;overflow:auto}.favorite-folder-list label{flex-wrap:wrap}.favorite-folder-list small{font-size:11px;color:var(--muted-foreground)}.favorite-add{display:flex;gap:6px;margin-top:12px;align-items:center}.favorite-add input{width:100%;min-width:0;min-height:40px;border:1px solid var(--border);border-radius:6px;padding:6px;background:var(--background);color:var(--foreground)}.favorite-add button{flex-shrink:0}.update-changes{margin:12px 0;font-size:14px;max-height:35dvh;overflow:auto}.update-changes ul{padding-left:22px;margin:8px 0}.update-changes li{margin:6px 0}
+
+/* Keep the action bar out of WebKit's scrolling/sticky hit-testing layer. */
+.editor-sheet .editor,.detail-pane .editor{display:flex;flex-direction:column;overflow:hidden;isolation:isolate}
+.editor>.editor-top,.editor.editor-close-left>.editor-top{position:relative;top:auto;flex:0 0 auto;z-index:2;isolation:isolate}
+.editor>.editor-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--light-line,#445774) transparent}
+.editor>.editor-body>.editor-scroll{overflow:visible;min-height:auto;flex:none}
+.editor .editor-actions{position:relative;z-index:1;pointer-events:auto;touch-action:manipulation}
+.editor-sheet,.editor-sheet.editor-sheet-left-controls{padding-top:max(8px,env(safe-area-inset-top))!important;padding-right:env(safe-area-inset-right);padding-left:env(safe-area-inset-left)}
+@supports (-webkit-touch-callout:none){
+ @media (display-mode:standalone){
+  .editor-sheet,.editor-sheet.editor-sheet-left-controls{padding-top:max(32px,env(safe-area-inset-top))!important}
+ }
+}

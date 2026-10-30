@@ -316,6 +316,7 @@ export default function Home(){
    <div className="editor-heading-status"><span className="eyebrow"><NotebookPen size={13}/>OPTION NOTE</span><div className="save-state" aria-live="polite">{dirty?<><span className="unsaved-dot"/>未保存の変更</>:draft.updatedAt?<><Check size={14}/>保存済み<time>{new Date(draft.updatedAt).toLocaleDateString('ja-JP')}</time></>:<><span className="outline-dot"/>この譜面は未設定</>}</div></div>
    {saveError&&!pendingAction&&<p className="save-error" role="alert">{saveError}</p>}
   </div>
+  <div className="editor-body">
   <div className="editor-song"><div className="song-micro">{seriesCode(activeSong.series)} / {seriesNames[activeSong.series]}{selected.importedInfo?.arcadeAvailability?<span className="removed-label">{chartAvailability(selected,activeSong)==='included'?'AC収録':chartAvailability(selected,activeSong)==='not_included'?'AC未収録':'収録状況不明'} · #{selected.importedInfo.arcadeAvailability.referenceVersion}基準</span>:<>{activeSong.availabilityUnknown&&<span className="removed-label">収録状況不明</span>}{activeSong.removed&&<span className="removed-label">{catalog?'AC未収録':'削除曲'}</span>}</>}</div><h2 style={titleStyle(activeSong.series)}><TitleColorText text={activeSong.title} style={titleStyle(activeSong.series)} gradientStyle={titleFillStyle(activeSong.series)}/></h2><p>{activeSong.artist}</p><div className="editor-meta"><span className="mode-badge">{mode}</span>{diffBadge(selected.difficulty)}<span className="editor-level">☆{selected.level||'?'}</span><span className="editor-bpm">{(selected.soflan??activeSong.soflan)&&<span className="editor-soflan"><Activity size={14} aria-hidden="true"/>ソフラン曲</span>}<span className="bpm">BPM {selected.bpm??activeSong.bpm}</span></span><ChartFeatures chart={selected}/>{!!selected.manualApplied?.length&&<span className="manual-badge">譜面データ手入力</span>}{favoritePicker(selected)}</div></div>
   <div className="editor-switches">
    <div><Tabs value={mode} onValueChange={changeMode}><TabsList aria-label="編集中のプレイモード">{(['SP','DP'] as Mode[]).map(m=><TabsTrigger key={m} value={m} disabled={!ready||busy||!!storageError||!charts.some(c=>c.songId===selected.songId&&c.mode===m)}>{m}</TabsTrigger>)}</TabsList></Tabs></div>
@@ -352,6 +353,7 @@ export default function Home(){
    <ImportedChartDetails song={activeSong} chart={selected}/>
     </EditorSection>
    </div>
+  </div>
   </div>
  </div>;
  return <div className={`app-shell ${editorCloseOnLeft?'top-controls-left':''}`} data-iidx-app="1">
